@@ -32,7 +32,7 @@ export default function SettingsPage() {
       <section className="relative py-16 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
-            src="/images/settings-hero.jpg"
+            src="images/help-center.jpg"
             alt="Settings"
             fill
             className="object-cover opacity-10"
