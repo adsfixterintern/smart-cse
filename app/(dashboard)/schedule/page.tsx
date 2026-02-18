@@ -231,7 +231,7 @@ export default function SchedulePage() {
               <CardDescription>Quick view of your entire week</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto border">
                 <div className="min-w-[800px]">
                   <div className="grid grid-cols-7 gap-2">
                     <div className="p-2 text-center text-sm font-medium text-muted-foreground">Time</div>
