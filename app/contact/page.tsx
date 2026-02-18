@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"
+import React from "react";
 import Image from "next/image";
 
 import { useState } from "react";
@@ -128,16 +128,22 @@ const offices = [
     city: "Dhaka",
     type: "Headquarters",
     address: "Level 4, Tower A, Dhaka Tech Park",
+    mapLink:
+      "https://www.google.com/maps/dir/?api=1&destination=Dhaka%20Tech%20Park%2C%20Dhaka%2C%20Bangladesh",
   },
   {
     city: "Chittagong",
     type: "Regional Office",
     address: "Suite 201, Business Center, GEC Circle",
+    mapLink:
+      "https://www.google.com/maps/dir/?api=1&destination=GEC%20Circle%2C%20Chattogram%2C%20Bangladesh",
   },
   {
     city: "Sylhet",
     type: "Sales Office",
     address: "Floor 3, IT Tower, Zindabazar",
+    mapLink:
+      "https://www.google.com/maps/dir/?api=1&destination=Zindabazar%2C%20Sylhet%2C%20Bangladesh",
   },
 ];
 
@@ -170,22 +176,22 @@ export default function ContactPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-{/* Hero Section */}
-  <section className="relative py-20 lg:py-28 overflow-hidden">
-  <div className="absolute inset-0 z-0">
-    <Image
-      src="/images/contact-support.jpg"
-      alt="Contact SmartCSE"
-      fill
-      className="object-cover opacity-10"
-    />
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/80 to-accent/20" />
-  </div>
-<div className="container mx-auto px-4 relative z-10">
-  <div className="max-w-3xl mx-auto text-center">
-  <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20">
-  Contact Us
-  </Badge>
+      {/* Hero Section */}
+      <section className="relative py-20 lg:py-28 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/contact-support.jpg"
+            alt="Contact SmartCSE"
+            fill
+            className="object-cover opacity-10"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/80 to-accent/20" />
+        </div>
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-3xl mx-auto text-center">
+            <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20">
+              Contact Us
+            </Badge>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 text-balance">
               {"We'd Love to"}{" "}
               <span className="text-primary">Hear From You</span>
@@ -293,7 +299,10 @@ export default function ContactPage() {
                       placeholder="Enter institution name"
                       value={formData.institution}
                       onChange={(e) =>
-                        setFormData({ ...formData, institution: e.target.value })
+                        setFormData({
+                          ...formData,
+                          institution: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -313,7 +322,9 @@ export default function ContactPage() {
                       <SelectItem value="general">General Inquiry</SelectItem>
                       <SelectItem value="demo">Request a Demo</SelectItem>
                       <SelectItem value="support">Technical Support</SelectItem>
-                      <SelectItem value="pricing">Pricing Information</SelectItem>
+                      <SelectItem value="pricing">
+                        Pricing Information
+                      </SelectItem>
                       <SelectItem value="partnership">Partnership</SelectItem>
                       <SelectItem value="feedback">Feedback</SelectItem>
                     </SelectContent>
@@ -484,8 +495,18 @@ export default function ContactPage() {
                     {office.city}
                   </h3>
                   <p className="text-muted-foreground mb-4">{office.address}</p>
-                  <Button variant="outline" size="sm">
+                  {/* <Button variant="outline" size="sm">
                     Get Directions
+                  </Button> */}
+
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={office.mapLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Get Directions
+                    </a>
                   </Button>
                 </CardContent>
               </Card>
@@ -494,19 +515,20 @@ export default function ContactPage() {
         </div>
       </section>
 
+
       {/* Map Section */}
       <section className="py-12 bg-secondary/30">
         <div className="container mx-auto px-4">
-          <div className="bg-card border border-border/50 rounded-2xl overflow-hidden h-[400px] flex items-center justify-center">
-            <div className="text-center p-8">
-              <MapPin className="h-16 w-16 text-primary/30 mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                Interactive map will be displayed here
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Dhaka Tech Park, Level 4, Tower A
-              </p>
-            </div>
+          <div className="bg-card border border-border/50 rounded-2xl overflow-hidden h-[400px]">
+            <iframe
+              src="https://www.google.com/maps?q=Dhaka%20Tech%20Park%2C%20Dhaka%2C%20Bangladesh&output=embed"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            ></iframe>
           </div>
         </div>
       </section>
