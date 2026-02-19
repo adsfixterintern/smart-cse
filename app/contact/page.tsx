@@ -1,7 +1,11 @@
 "use client";
 
-import React from "react"
+import React from "react";
 import Image from "next/image";
+
+import emailjs from "@emailjs/browser";
+import toast, { Toaster } from "react-hot-toast";
+
 
 import { useState } from "react";
 import { Navbar } from "@/components/navbar";
@@ -159,33 +163,68 @@ export default function ContactPage() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In the future, this will connect to Firebase
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const promise = emailjs.send(
+    process.env.NEXT_PUBLIC_SERVICE_ID as string,
+    process.env.NEXT_PUBLIC_TEMPLATE_ID as string,
+    {
+      from_name: formData.name || "No Name",
+      from_email: formData.email || "No Email",
+      phone: formData.phone || "N/A",
+      institution: formData.institution || "N/A",
+      subject: formData.subject || "General Inquiry",
+      message: formData.message || "No message",
+    },
+    process.env.NEXT_PUBLIC_PUBLIC_KEY as string
+  );
+
+  toast.promise(promise, {
+    loading: "Sending message...",
+    success: "Message sent successfully!",
+    error: "Failed to send message",
+  });
+
+  try {
+    await promise;
+
     setIsSubmitted(true);
-    setTimeout(() => setIsSubmitted(false), 3000);
-  };
+
+    // FORM RESET
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      institution: "",
+      subject: "",
+      message: "",
+    });
+
+  } catch {}
+};
+
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-{/* Hero Section */}
-  <section className="relative py-20 lg:py-28 overflow-hidden">
-  <div className="absolute inset-0 z-0">
-    <Image
-      src="/images/contact-support.jpg"
-      alt="Contact SmartCSE"
-      fill
-      className="object-cover opacity-10"
-    />
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/80 to-accent/20" />
-  </div>
-<div className="container mx-auto px-4 relative z-10">
-  <div className="max-w-3xl mx-auto text-center">
-  <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20">
-  Contact Us
-  </Badge>
+      {/* Hero Section */}
+      <section className="relative py-20 lg:py-28 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/contact-support.jpg"
+            alt="Contact SmartCSE"
+            fill
+            className="object-cover opacity-10"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background/80 to-accent/20" />
+        </div>
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-3xl mx-auto text-center">
+            <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20">
+              Contact Us
+            </Badge>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 text-balance">
               {"We'd Love to"}{" "}
               <span className="text-primary">Hear From You</span>
@@ -293,7 +332,10 @@ export default function ContactPage() {
                       placeholder="Enter institution name"
                       value={formData.institution}
                       onChange={(e) =>
-                        setFormData({ ...formData, institution: e.target.value })
+                        setFormData({
+                          ...formData,
+                          institution: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -313,7 +355,9 @@ export default function ContactPage() {
                       <SelectItem value="general">General Inquiry</SelectItem>
                       <SelectItem value="demo">Request a Demo</SelectItem>
                       <SelectItem value="support">Technical Support</SelectItem>
-                      <SelectItem value="pricing">Pricing Information</SelectItem>
+                      <SelectItem value="pricing">
+                        Pricing Information
+                      </SelectItem>
                       <SelectItem value="partnership">Partnership</SelectItem>
                       <SelectItem value="feedback">Feedback</SelectItem>
                     </SelectContent>
@@ -651,7 +695,7 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-
+     
       <Footer />
     </div>
   );
