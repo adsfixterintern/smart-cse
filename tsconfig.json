@@ -1,21 +1,21 @@
 {
   "compilerOptions": {
+    "target": "ESNext",
     "lib": [
       "dom",
       "dom.iterable",
       "esnext"
     ],
     "allowJs": true,
-    "target": "ES6",
     "skipLibCheck": true,
     "strict": true,
-    "noEmit": true,
+    "noEmit": true, // Next.js handles the emitting
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "react-jsx", // Recommended for Next.js
     "incremental": true,
     "plugins": [
       {
