@@ -24,10 +24,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   { icon: Megaphone, label: "Official Notices", href: "/admin/notices" },
   { icon: CheckSquare, label: "Attendance Logs", href: "/admin/attendance" },
   { icon: FileSpreadsheet, label: "Financials", href: "/admin/finance" },
-  { icon: MessageSquareText, label: "Student Feedback", href: "/admin/feedback" },
+  { icon: MessageSquareText, label: "Student Feedback", href: "/admin/student-feedback" },
   { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
   { icon: Settings, label: "General Settings", href: "/admin/settings" },
-  { icon: ShieldAlert, label: "Security Logs", href: "/admin/logs" },
+  { icon: ShieldAlert, label: "Security Logs", href: "/admin/security-logs" },
   ]
 
   return (
