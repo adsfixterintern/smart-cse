@@ -1,49 +1,83 @@
-"use client"
+"use client";
 
-import React from "react"
-import Image from "next/image"
-
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
+import React from "react";
+import Image from "next/image";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   setIsLoading(true)
+  //   setError("")
 
-    // TODO: Implement Firebase Authentication
-    // import { signInWithEmailAndPassword } from "firebase/auth"
-    // import { auth } from "@/lib/firebase"
+  //   // TODO: Implement Firebase Authentication
+  //   // import { signInWithEmailAndPassword } from "firebase/auth"
+  //   // import { auth } from "@/lib/firebase"
+
+  //   // try {
+  //   //   await signInWithEmailAndPassword(auth, email, password)
+  //   //   router.push("/dashboard")
+  //   // } catch (error) {
+  //   //   setError("Invalid email or password")
+  //   // }
+
+  //   // Simulating login for demo purposes
+  //   setTimeout(() => {
+  //     setIsLoading(false)
+  //     router.push("/dashboard")
+  //   }, 1500)
+  // }
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError("");
+
+  const result = await signIn("credentials", {
+    email,
+    name: email,
+    redirect: false,
+  });
+
+  setIsLoading(false);
+
+  if (result?.error) {
+    setError("Login failed");
+    toast.error("❌ Login failed!");
+  } else {
+    toast.success("✅ Login successful!");
     
-    // try {
-    //   await signInWithEmailAndPassword(auth, email, password)
-    //   router.push("/dashboard")
-    // } catch (error) {
-    //   setError("Invalid email or password")
-    // }
-
-    // Simulating login for demo purposes
     setTimeout(() => {
-      setIsLoading(false)
-      router.push("/dashboard")
-    }, 1500)
+      router.push("/dashboard");
+    }, 1000);
   }
+};
+
+
 
   return (
     <div className="min-h-screen flex">
@@ -58,13 +92,16 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-primary/60" />
         <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-12">
           <GraduationCap className="h-16 w-16 text-primary-foreground mb-6" />
-          <h2 className="text-3xl font-bold text-primary-foreground mb-4">Welcome to SmartCSE</h2>
+          <h2 className="text-3xl font-bold text-primary-foreground mb-4">
+            Welcome to SmartCSE
+          </h2>
           <p className="text-primary-foreground/90 text-lg max-w-md">
-            Streamline your academic journey with our comprehensive management platform
+            Streamline your academic journey with our comprehensive management
+            platform
           </p>
         </div>
       </div>
-      
+
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-background p-4">
         <div className="absolute inset-0 lg:hidden -z-10">
@@ -78,10 +115,14 @@ export default function LoginPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
                 <GraduationCap className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="text-2xl font-bold text-foreground">SmartCSE</span>
+              <span className="text-2xl font-bold text-foreground">
+                SmartCSE
+              </span>
             </Link>
             <CardTitle className="text-2xl">Welcome back</CardTitle>
-            <CardDescription>Sign in to your account to continue</CardDescription>
+            <CardDescription>
+              Sign in to your account to continue
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -133,7 +174,11 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -142,9 +187,14 @@ export default function LoginPage() {
                 <Checkbox
                   id="remember"
                   checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setRememberMe(checked as boolean)
+                  }
                 />
-                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                <Label
+                  htmlFor="remember"
+                  className="text-sm font-normal cursor-pointer"
+                >
                   Remember me for 30 days
                 </Label>
               </div>
@@ -162,7 +212,9 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">Do not have an account? </span>
+              <span className="text-muted-foreground">
+                Do not have an account?{" "}
+              </span>
               <Link href="/register" className="text-primary hover:underline">
                 Sign up
               </Link>
@@ -171,5 +223,5 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
