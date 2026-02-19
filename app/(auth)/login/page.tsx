@@ -57,26 +57,37 @@ const handleSubmit = async (e: React.FormEvent) => {
   setIsLoading(true);
   setError("");
 
-  const result = await signIn("credentials", {
-    email,
-    name: email,
-    redirect: false,
-  });
+  try {
+    const result = await signIn("credentials", {
+      email,
+      password, // পাসওয়ার্ডটি অবশ্যই পাঠাতে হবে
+      redirect: false,
+    });
 
-  setIsLoading(false);
-
-  if (result?.error) {
-    setError("Login failed");
-    toast.error("❌ Login failed!");
-  } else {
-    toast.success("✅ Login successful!");
-    
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 1000);
+    if (result?.error) {
+      // স্লাইটলি বেটার এরর মেসেজ হ্যান্ডলিং
+      const errorMessage = result.error === "CredentialsSignin" 
+        ? "Invalid email or password" 
+        : result.error;
+        
+      setError(errorMessage);
+      toast.error(`${errorMessage}`);
+      setIsLoading(false);
+    } else {
+      toast.success("✅ Login successful!");
+      
+      // সেশন আপডেট হওয়ার জন্য ১ সেকেন্ড ওয়েট করে ড্যাশবোর্ডে পাঠানো
+      setTimeout(() => {
+        router.push("/dashboard");
+        router.refresh(); // সেশন যেন সাথে সাথে আপডেট হয়
+      }, 1000);
+    }
+  } catch (err) {
+    setError("Something went wrong. Please try again.");
+    toast.error(" Connection failed!");
+    setIsLoading(false);
   }
 };
-
 
 
   return (
