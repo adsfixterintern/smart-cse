@@ -11,56 +11,59 @@ const handler = NextAuth({
       },
 
       async authorize(credentials) {
-  if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
-  try {
-    const res = await fetch("http://localhost:5001/login", { // পোর্ট ঠিক আছে কি না দেখুন
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: credentials.email,
-        password: credentials.password,
-      }),
-    });
+        try {
+          const res = await fetch("http://localhost:5001/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
 
-    const data = await res.json();
+          const data = await res.json();
 
-    if (res.ok && data.user) {
-      return {
-        id: data.user.id,
-        email: data.user.email,
-        role: data.user.role,
-        accessToken: data.token,
-      };
-    }
-    
-    // যদি ব্যাকএন্ড থেকে এরর আসে
-    throw new Error(data.message || "Invalid credentials");
-  } catch (error: any) {
-    throw new Error(error.message);
-  }
-}
+          // যদি রেসপন্স ওকে হয় এবং ইউজার ডাটা থাকে
+          if (res.ok && data.user) {
+            return {
+              id: data.user.id,
+              email: data.user.email,
+              role: data.user.role || "student",
+              accessToken: data.token,
+              name: data.user.name || "User"
+            };
+          }
+          
+          // এরর থ্রো না করে সরাসরি null রিটার্ন করা নিরাপদ অথবা এরর অবজেক্ট পাঠানো
+          return null; 
+        } catch (error: any) {
+          console.error("Auth Fetch Error:", error);
+          return null;
+        }
+      }
     }),
   ],
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // ৩০ দিন (আপনার 'Remember Me' এর সাথে সামঞ্জস্য রেখে)
+    maxAge: 30 * 24 * 60 * 60, 
   },
 
   callbacks: {
     async jwt({ token, user }) {
-      // লগইন করার সময় ইউজার ডাটা টোকেনে সেট করা
       if (user) {
         token.role = (user as any).role;
         token.accessToken = (user as any).accessToken;
-        token.id = user.id;
+        token.id = (user as any).id;
       }
       return token;
     },
 
     async session({ session, token }) {
-      // ক্লায়েন্ট সাইডে সেশন এক্সেস করার সময় ডাটাগুলো পাস করা
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).accessToken = token.accessToken;
@@ -72,10 +75,11 @@ const handler = NextAuth({
 
   pages: {
     signIn: "/login",
-    error: "/login", // এরর হলে লগইন পেজেই পাঠাবে
+    error: "/login", 
   },
 
-  secret: process.env.NEXTAUTH_SECRET,
+  // নিশ্চিত করুন আপনার .env ফাইলে NEXTAUTH_SECRET আছে
+  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev-only",
 });
 
 export { handler as GET, handler as POST };
