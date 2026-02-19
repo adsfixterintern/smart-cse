@@ -76,9 +76,9 @@ const handler = NextAuth({
   pages: {
     signIn: "/login",
     error: "/login", 
+    signOut:'/login'
   },
-
-  // নিশ্চিত করুন আপনার .env ফাইলে NEXTAUTH_SECRET আছে
+  
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev-only",
 });
 

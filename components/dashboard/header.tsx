@@ -13,12 +13,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Bell, Search, Menu, X, GraduationCap } from "lucide-react"
+import { Bell, Search, Menu, X, GraduationCap, UserIcon, LogOut, SettingsIcon } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { MobileSidebar } from "./mobile-sidebar"
+import { signOut, useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 export function DashboardHeader() {
   const [searchOpen, setSearchOpen] = useState(false)
+  const { data: session } = useSession()
+  const router = useRouter()
+
+const handleLogout = async () => {
+  const data = await signOut({
+    redirect: false,
+    callbackUrl: "/login"
+  });
+  router.push("/login");
+  router.refresh();
+};
+
+
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "SC"
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-4 md:px-6">
@@ -90,27 +110,41 @@ export function DashboardHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary text-primary-foreground">MH</AvatarFallback>
+                <AvatarFallback className="bg-primary text-primary-foreground">{getInitials(session?.user?.name)}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <span>Md. Mosaraf Hossen</span>
-                <span className="text-sm font-normal text-muted-foreground">21CSE-044</span>
+         <DropdownMenuContent align="end" className="w-64 p-2">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-bold leading-none">{session?.user?.name || "Loading..."}</p>
+                <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
+                <span className="w-fit mt-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase italic text-primary tracking-tighter">
+                  { (session?.user as any)?.role || "User" }
+                </span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/profile">Profile</Link>
+            
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/profile" className="flex items-center gap-2">
+                <UserIcon className="h-4 w-4" /> Profile
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings">Settings</Link>
+            
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/settings" className="flex items-center gap-2">
+                <SettingsIcon className="h-4 w-4" /> Settings
+              </Link>
             </DropdownMenuItem>
+            
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/login">Sign Out</Link>
+            
+            <DropdownMenuItem 
+              onClick={handleLogout} 
+              className="flex items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-bold"
+            >
+              <LogOut className="h-4 w-4" /> Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
