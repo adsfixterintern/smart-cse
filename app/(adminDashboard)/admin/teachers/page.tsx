@@ -224,17 +224,28 @@ export default function FacultyManagement() {
                 </div>
               ) : (
                 <CldUploadWidget 
-                  uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
-                  onSuccess={(result: CloudinaryUploadWidgetResults) => {
-                    if (result.info && typeof result.info !== "string") setFormData({...formData, imageUrl: result.info.secure_url})
-                  }}
-                >
-                  {({ open }) => (
-                    <div onClick={() => open()} className="w-full h-24 border-4 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-slate-50 mt-2">
-                      <ImageIcon className="text-slate-300" /><span className="text-[10px] font-black uppercase text-slate-400">Click to Upload Photo</span>
-                    </div>
-                  )}
-                </CldUploadWidget>
+  uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
+  onSuccess={(result: CloudinaryUploadWidgetResults) => {
+    if (result.info && typeof result.info !== "string") 
+      setFormData({...formData, imageUrl: result.info.secure_url})
+  }}
+>
+  {({ open }) => (
+    <div 
+      onClick={(e) => {
+        e.preventDefault(); 
+        e.stopPropagation(); 
+        open?.();
+      }} 
+      className="w-full h-24 border-4 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-slate-50 mt-2 group"
+    >
+      <ImageIcon className="text-slate-300 group-hover:text-primary transition-colors" />
+      <span className="text-[10px] font-black uppercase text-slate-400 group-hover:text-slate-600">
+        Click to Upload Photo
+      </span>
+    </div>
+  )}
+</CldUploadWidget>
               )}
             </div>
             <Button type="submit" className="w-full h-16 rounded-2xl font-black text-xl uppercase tracking-tighter col-span-2 shadow-2xl shadow-primary/30 mt-4">{editingTeacher ? "Update" : "Save"} Faculty Member</Button>
