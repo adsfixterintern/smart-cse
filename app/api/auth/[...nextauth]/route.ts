@@ -1,7 +1,5 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-// import { db } from "@/lib/db"; // Apnar database connection code ekhane thakbe
-// import bcrypt from "bcryptjs";
 
 const handler = NextAuth({
   providers: [
@@ -9,39 +7,88 @@ const handler = NextAuth({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
+
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email) {
+          throw new Error("Email required");
+        }
 
-        // 1. Database theke user khujun
-        // const user = await db.user.findUnique({ where: { email: credentials.email } });
-        // if (!user) throw new Error("No user found");
+        try {
+          //  Check user exists (GET /users with token লাগবে না এখানে)
+          const usersRes = await fetch("http://localhost:5001/users");
+          const users = await usersRes.json();
 
-        // 2. Password check korun
-        // const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password);
-        // if (!isPasswordCorrect) throw new Error("Invalid password");
+          const existingUser = users.find(
+            (u: any) => u.email === credentials.email,
+          );
 
-        // Temporary return for testing
-        return { id: "1", name: "Imam", email: credentials.email, role: "student" };
-      }
-    })
+          if (!existingUser) {
+            throw new Error("User not found");
+          }
+
+          //  Password verify backend এ হচ্ছে না
+          // চাইলে এখানে credentials.password === existingUser.password দিয়ে মিলাতে পারো
+
+          //  2️Get JWT token
+          const jwtRes = await fetch("http://localhost:5001/jwt", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: existingUser.email,
+              role: existingUser.role || "user",
+            }),
+          });
+
+          const jwtData = await jwtRes.json();
+
+          if (!jwtRes.ok) {
+            throw new Error("Token generation failed");
+          }
+
+          return {
+            id: existingUser._id,
+            email: existingUser.email,
+            role: existingUser.role || "user",
+            accessToken: jwtData.token,
+          };
+        } catch (error) {
+          throw new Error("Authentication failed");
+        }
+      },
+    }),
   ],
+
+  session: {
+    strategy: "jwt",
+  },
+
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.role = (user as any).role;
+      if (user) {
+        token.role = (user as any).role;
+        token.accessToken = (user as any).accessToken;
+        token.email = user.email;
+      }
       return token;
     },
+
     async session({ session, token }) {
-      if (session.user) (session.user as any).role = token.role;
+      if (session.user) {
+        (session.user as any).role = token.role;
+        (session.user as any).accessToken = token.accessToken;
+      }
       return session;
-    }
+    },
   },
+
   pages: {
     signIn: "/login",
-    error: "/auth/error",
   },
-  session: { strategy: "jwt" },
+
   secret: process.env.NEXTAUTH_SECRET,
 });
 
