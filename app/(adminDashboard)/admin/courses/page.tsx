@@ -1,13 +1,15 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
+import { CldUploadWidget, CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { 
-  Plus, Pencil, Trash2, Search, BookOpen, User as UserIcon, X, Calendar, BookText
+  Plus, Pencil, Trash2, Search, User, Mail, GraduationCap, X, Filter, ImageIcon
 } from "lucide-react"
+import Image from "next/image"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog"
@@ -18,123 +20,135 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 
-interface Course {
+interface Teacher {
   id: string;
-  courseCode: string;
-  courseTitle: string;
-  credits: string;
-  semester: string;
-  assignedTeacher: string;
-  description: string;
+  name: string;
+  email: string;
+  phone: string;
+  designation: string;
+  specialization: string;
+  experience: string;
+  imageUrl: string;
+  teacherId: string;
 }
 
-const sampleCourses: Course[] = [
-  { id: "1", courseCode: "CSE-321", courseTitle: "Computer Networks", credits: "3.0", semester: "6th", assignedTeacher: "Dr. Selim Reza", description: "Study of network architectures, protocols, and data communication." },
-  { id: "2", courseCode: "CSE-322", courseTitle: "Computer Networks Lab", credits: "1.5", semester: "6th", assignedTeacher: "Mehedi Hasan", description: "Hands-on experience with socket programming and network configuration." },
+const sampleTeachers: Teacher[] = [
+  { id: "1", teacherId: "T-101", name: "Dr. Selim Reza", email: "selim@bu.edu.bd", phone: "+8801711223344", designation: "Professor", specialization: "Machine Learning & AI", experience: "15", imageUrl: "" },
+  { id: "2", teacherId: "T-102", name: "Mehedi Hasan", email: "mehedi@bu.edu.bd", phone: "+8801811223344", designation: "Lecturer", specialization: "Web Development", experience: "3", imageUrl: "" },
 ]
 
-export default function CourseManagement() {
-  const [courses, setCourses] = useState<Course[]>(sampleCourses)
+export default function FacultyManagement() {
+  const [teachers, setTeachers] = useState<Teacher[]>(sampleTeachers)
   const [searchQuery, setSearchQuery] = useState("")
-  const [semesterFilter, setSemesterFilter] = useState("all")
+  const [designationFilter, setDesignationFilter] = useState("all")
   
-  const [viewingCourse, setViewingCourse] = useState<Course | null>(null)
+  const [viewingTeacher, setViewingTeacher] = useState<Teacher | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null)
 
-  const [formData, setFormData] = useState<Omit<Course, 'id'>>({
-    courseCode: "", courseTitle: "", credits: "", semester: "", assignedTeacher: "", description: ""
+  const [formData, setFormData] = useState<Omit<Teacher, 'id'>>({
+    name: "", email: "", phone: "", designation: "", specialization: "", experience: "", teacherId: "", imageUrl: ""
   })
 
-  const filteredCourses = useMemo(() => {
-    return courses.filter(c => {
-      const matchesSearch = c.courseTitle.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           c.courseCode.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesSemester = semesterFilter === "all" || c.semester === semesterFilter;
-      return matchesSearch && matchesSemester;
+  const filteredTeachers = useMemo(() => {
+    return teachers.filter(t => {
+      const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           t.teacherId.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDesignation = designationFilter === "all" || t.designation === designationFilter;
+      return matchesSearch && matchesDesignation;
     })
-  }, [courses, searchQuery, semesterFilter])
+  }, [teachers, searchQuery, designationFilter])
 
   const handleOpenAdd = () => {
-    setEditingCourse(null)
-    setFormData({ courseCode: "", courseTitle: "", credits: "", semester: "", assignedTeacher: "", description: "" })
+    setEditingTeacher(null)
+    setFormData({ name: "", email: "", phone: "", designation: "", specialization: "", experience: "", teacherId: "", imageUrl: "" })
     setIsFormOpen(true)
   }
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingCourse) {
-      setCourses(courses.map(c => c.id === editingCourse.id ? { ...formData, id: c.id } : c))
+    if (editingTeacher) {
+      setTeachers(teachers.map(t => t.id === editingTeacher.id ? { ...formData, id: t.id } : t))
     } else {
-      setCourses([{ ...formData, id: Math.random().toString(36).substr(2, 9) }, ...courses])
+      setTeachers([{ ...formData, id: Math.random().toString(36).substr(2, 9) }, ...teachers])
     }
     setIsFormOpen(false)
+  }
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    if (window.confirm("Delete this profile?")) {
+      setTeachers(teachers.filter(t => t.id !== id))
+    }
   }
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700">
       
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-4xl font-black italic tracking-tighter text-slate-900 uppercase underline decoration-primary decoration-4 underline-offset-8">Courses</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black italic tracking-tighter text-slate-900 uppercase underline decoration-primary decoration-4 underline-offset-8">Faculty</h1>
+          <p className="text-slate-500 font-medium italic text-sm pt-2 px-1">Manage department teachers & staff</p>
+        </div>
         <Button onClick={handleOpenAdd} className="bg-primary h-14 px-8 rounded-2xl font-black text-lg shadow-xl shadow-primary/30">
-          <Plus className="mr-2 h-6 w-6 stroke-[3px]" /> ADD COURSE
+          <Plus className="mr-2 h-6 w-6 stroke-[3px]" /> ADD TEACHER
         </Button>
       </div>
 
       {/* Filter Section */}
-      <Card className="p-6 rounded-[2.5rem] border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
+      <div className="bg-white p-6 rounded-[2.5rem] border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative col-span-2">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
           <Input 
-            placeholder="Search by Title or Code..." 
+            placeholder="Search by Name or ID..." 
             className="pl-12 h-14 bg-slate-50 border-none rounded-2xl font-bold"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Select onValueChange={setSemesterFilter} defaultValue="all">
+        <Select onValueChange={setDesignationFilter} defaultValue="all">
           <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl font-bold">
-            <SelectValue placeholder="Semester" />
+            <SelectValue placeholder="Designation" />
           </SelectTrigger>
-          <SelectContent className="font-bold">
-            <SelectItem value="all">All Semesters</SelectItem>
-            <SelectItem value="1st">1st Semester</SelectItem>
-            <SelectItem value="6th">6th Semester</SelectItem>
+          <SelectContent className="rounded-xl border-none shadow-2xl font-bold">
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="Professor">Professor</SelectItem>
+            <SelectItem value="Lecturer">Lecturer</SelectItem>
           </SelectContent>
         </Select>
-      </Card>
+      </div>
 
-      {/* Table Content */}
+      {/* Teacher Table */}
       <Card className="border-none shadow-2xl bg-white rounded-[2.5rem] overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-900">
+          <TableHeader className="bg-slate-900 border-none">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-32 px-8 text-white font-bold py-6 italic uppercase">Code</TableHead>
-              <TableHead className="text-white font-bold py-6 italic uppercase">Title</TableHead>
-              <TableHead className="text-right px-8 text-white font-bold py-6 italic uppercase text-xs tracking-widest">Actions</TableHead>
+              <TableHead className="w-24 px-8 text-white font-bold py-6 italic uppercase">Photo</TableHead>
+              <TableHead className="text-white font-bold py-6 italic uppercase">Info</TableHead>
+              <TableHead className="text-right px-8 text-white font-bold py-6 italic uppercase">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCourses.map((course) => (
+            {filteredTeachers.map((teacher) => (
               <TableRow 
-                key={course.id} 
+                key={teacher.id} 
                 className="cursor-pointer hover:bg-slate-50 transition-all group"
-                onClick={() => setViewingCourse(course)}
+                onClick={() => setViewingTeacher(teacher)}
               >
                 <TableCell className="px-8 py-6">
-                   <span className="font-black text-primary text-sm bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
-                    {course.courseCode}
-                   </span>
+                  <div className="h-14 w-14 border-2 border-slate-100 rounded-2xl bg-slate-50 relative overflow-hidden flex items-center justify-center">
+                    {teacher.imageUrl ? <Image src={teacher.imageUrl} alt="" fill className="object-cover" /> : <User className="h-6 w-6 text-slate-300" />}
+                  </div>
                 </TableCell>
                 <TableCell className="py-6">
-                  <p className="font-black text-slate-800 text-lg uppercase tracking-tight italic group-hover:text-primary transition-colors leading-none">{course.courseTitle}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 italic">Credits: {course.credits} • {course.assignedTeacher}</p>
+                  <p className="font-black text-slate-800 text-lg uppercase tracking-tight italic group-hover:text-primary transition-colors leading-none">{teacher.name}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 leading-none italic">{teacher.teacherId} • {teacher.designation}</p>
                 </TableCell>
                 <TableCell className="text-right px-8" onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-end gap-3">
-                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={(e) => { e.stopPropagation(); setEditingCourse(course); setFormData({...course}); setIsFormOpen(true); }}><Pencil size={16} className="text-blue-600" /></Button>
-                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl text-red-600" onClick={(e) => { e.stopPropagation(); setCourses(courses.filter(c => c.id !== course.id)); }}><Trash2 size={16} /></Button>
+                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={(e) => { e.stopPropagation(); setEditingTeacher(teacher); setFormData({...teacher}); setIsFormOpen(true); }}><Pencil size={16} className="text-blue-600" /></Button>
+                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={(e) => handleDelete(e, teacher.id)}><Trash2 size={16} className="text-red-600" /></Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -143,143 +157,96 @@ export default function CourseManagement() {
         </Table>
       </Card>
 
-      {/* --- MODAL 1: VIEW DETAILS --- */}
-      <Dialog open={!!viewingCourse} onOpenChange={() => setViewingCourse(null)}>
-        <DialogContent className="max-w-2xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
+      {/* --- MODAL 1: VIEW PROFILE --- */}
+      <Dialog open={!!viewingTeacher} onOpenChange={() => setViewingTeacher(null)}>
+        <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
           <DialogHeader className="sr-only">
-            <DialogTitle>{viewingCourse?.courseTitle || "Course Info"}</DialogTitle>
-            <DialogDescription>Full details of the academic course.</DialogDescription>
+            <DialogTitle>{viewingTeacher?.name || "Profile"}</DialogTitle>
+            <DialogDescription>Full details of the faculty member.</DialogDescription>
           </DialogHeader>
-          <div className="bg-slate-900 p-12 text-center space-y-2">
-             <div className="inline-flex p-4 bg-primary/20 rounded-3xl mb-4">
-                <BookOpen size={40} className="text-primary" />
+          <div className="bg-slate-900 p-10 flex flex-col items-center text-center space-y-4">
+             <div className="h-32 w-32 rounded-[2rem] border-4 border-primary/30 relative overflow-hidden bg-white shadow-2xl">
+                {viewingTeacher?.imageUrl ? <Image src={viewingTeacher.imageUrl} alt="" fill className="object-cover" /> : <User className="h-12 w-12 m-auto mt-8 text-slate-200" />}
              </div>
-             <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">{viewingCourse?.courseTitle}</h2>
-             <p className="text-primary text-xs font-black uppercase tracking-[0.3em]">{viewingCourse?.courseCode}</p>
+             <div>
+                <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">{viewingTeacher?.name}</h2>
+                <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em] mt-2 italic">{viewingTeacher?.designation}</p>
+             </div>
           </div>
-          <div className="p-10 space-y-6 bg-white font-bold italic">
-             <div className="grid grid-cols-2 gap-8">
-                <div className="space-y-1">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Semester</p>
-                   <p className="text-lg text-slate-700">{viewingCourse?.semester} Semester</p>
-                </div>
-                <div className="space-y-1 text-right">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Credit Hours</p>
-                   <p className="text-lg text-slate-700">{viewingCourse?.credits}</p>
-                </div>
-                <div className="col-span-2 space-y-2 pt-4 border-t">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><UserIcon size={12} /> Assigned Faculty</p>
-                   {/* FIXED LINE BELOW */}
-                   <p className="text-xl text-primary leading-none uppercase">{viewingCourse?.assignedTeacher}</p>
-                </div>
-                <div className="col-span-2 space-y-2 pt-4 border-t">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><BookText size={12} /> Syllabus Preview</p>
-                   <p className="text-sm font-medium text-slate-600 leading-relaxed normal-case not-italic">{viewingCourse?.description}</p>
-                </div>
+          <div className="p-8 space-y-4 bg-white font-bold italic">
+             <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 border-b pb-2"><p className="text-[10px] text-slate-400 uppercase leading-none mb-1">Specialization</p><p className="text-slate-700 leading-tight">{viewingTeacher?.specialization}</p></div>
+                <div><p className="text-[10px] text-slate-400 uppercase leading-none mb-1">Teacher ID</p><p className="text-slate-700 leading-none">{viewingTeacher?.teacherId}</p></div>
+                <div><p className="text-[10px] text-slate-400 uppercase leading-none mb-1">Experience</p><p className="text-slate-700 leading-none">{viewingTeacher?.experience} Years</p></div>
              </div>
-             <Button onClick={() => setViewingCourse(null)} className="w-full mt-6 h-14 rounded-2xl font-black uppercase text-lg shadow-xl shadow-primary/20">CLOSE VIEW</Button>
+             <Button onClick={() => setViewingTeacher(null)} className="w-full mt-4 rounded-xl font-black">CLOSE PROFILE</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* --- MODAL 2: ADD / EDIT FORM (simplified for demo) --- */}
-     {/* --- MODAL 2: ADD / EDIT FORM --- */}
-<Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-  <DialogContent className="max-w-2xl p-10 rounded-[2.5rem] border-none shadow-2xl max-h-[90vh] overflow-y-auto">
-    <DialogHeader>
-      <DialogTitle className="text-3xl font-black italic tracking-tighter uppercase leading-none">
-        {editingCourse ? "Edit" : "New"} Academic Course
-      </DialogTitle>
-      <DialogDescription className="italic font-medium text-slate-400 mt-2">
-        Assign course code, credits, and semester for this curriculum.
-      </DialogDescription>
-    </DialogHeader>
+      {/* --- MODAL 2: ADD / EDIT FORM --- */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-xl p-10 rounded-[2.5rem] border-none shadow-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-3xl font-black italic tracking-tighter uppercase leading-none">
+              {editingTeacher ? "Edit" : "New"} Faculty
+            </DialogTitle>
+            <DialogDescription className="italic font-medium text-slate-400 mt-2">Enter teacher's official information.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+            <div className="space-y-2">
+               <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Full Name</Label>
+               <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" required />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Teacher ID</Label>
+                <Input value={formData.teacherId} onChange={(e) => setFormData({...formData, teacherId: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" required />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Designation</Label>
+                <Input value={formData.designation} onChange={(e) => setFormData({...formData, designation: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+              </div>
+            </div>
 
-    <form className="grid grid-cols-2 gap-6 mt-8" onSubmit={handleFormSubmit}>
-      {/* Course Title */}
-      <div className="space-y-1 col-span-2">
-         <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Course Full Title</Label>
-         <Input 
-           value={formData.courseTitle} 
-           onChange={(e) => setFormData({...formData, courseTitle: e.target.value})} 
-           placeholder="e.g. Data Structures & Algorithms" 
-           className="h-14 bg-slate-50 border-none rounded-2xl font-bold text-lg" 
-           required 
-         />
-      </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Media</Label>
+              {formData.imageUrl ? (
+                <div className="relative h-40 w-full rounded-3xl border-4 border-slate-50 overflow-hidden group">
+                  <Image src={formData.imageUrl} alt="" fill className="object-cover" />
+                  <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-full" onClick={() => setFormData({...formData, imageUrl: ""})}><X className="h-4 w-4" /></Button>
+                </div>
+              ) : (
+                <CldUploadWidget 
+                  uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
+                  onSuccess={(result: CloudinaryUploadWidgetResults) => {
+                    if (result.info && typeof result.info !== "string") setFormData({...formData, imageUrl: result.info.secure_url})
+                  }}
+                >
+                  {({ open }) => (
+                    <div 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        open?.();
+                      }} 
+                      className="w-full h-24 border-4 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-slate-50 transition-all"
+                    >
+                      <ImageIcon className="h-6 w-6 text-slate-300" />
+                      <span className="text-[10px] font-black uppercase text-slate-400 italic">Click to Upload Photo</span>
+                    </div>
+                  )}
+                </CldUploadWidget>
+              )}
+            </div>
 
-      {/* Course Code */}
-      <div className="space-y-1 col-span-2 sm:col-span-1">
-         <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Course Code</Label>
-         <Input 
-           value={formData.courseCode} 
-           onChange={(e) => setFormData({...formData, courseCode: e.target.value})} 
-           placeholder="e.g. CSE-211" 
-           className="h-14 bg-slate-50 border-none rounded-2xl font-bold uppercase" 
-           required 
-         />
-      </div>
-
-      {/* Credits */}
-      <div className="space-y-1 col-span-2 sm:col-span-1">
-         <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Credit Hours</Label>
-         <Input 
-           value={formData.credits} 
-           onChange={(e) => setFormData({...formData, credits: e.target.value})} 
-           placeholder="e.g. 3.0" 
-           className="h-14 bg-slate-50 border-none rounded-2xl font-bold" 
-           required 
-         />
-      </div>
-
-      {/* Semester Selection (নতুন যোগ করা হয়েছে) */}
-      <div className="space-y-1 col-span-2 sm:col-span-1">
-         <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Target Semester</Label>
-         <Select 
-           onValueChange={(value) => setFormData({...formData, semester: value})} 
-           value={formData.semester}
-         >
-           <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl font-bold">
-             <SelectValue placeholder="Select Semester" />
-           </SelectTrigger>
-           <SelectContent className="rounded-xl border-none shadow-2xl font-bold">
-             {["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"].map((sem) => (
-               <SelectItem key={sem} value={sem}>{sem} Semester</SelectItem>
-             ))}
-           </SelectContent>
-         </Select>
-      </div>
-
-      {/* Assign Teacher */}
-      <div className="space-y-1 col-span-2 sm:col-span-1">
-         <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Assign Faculty</Label>
-         <Input 
-           value={formData.assignedTeacher} 
-           onChange={(e) => setFormData({...formData, assignedTeacher: e.target.value})} 
-           placeholder="Teacher Name" 
-           className="h-14 bg-slate-50 border-none rounded-2xl font-bold" 
-         />
-      </div>
-
-      {/* Description */}
-      <div className="space-y-1 col-span-2">
-         <Label className="text-[10px] font-black uppercase ml-1 tracking-widest text-slate-500">Course Syllabus / Notes</Label>
-         <textarea 
-           value={formData.description} 
-           onChange={(e) => setFormData({...formData, description: e.target.value})} 
-           rows={4} 
-           className="w-full bg-slate-50 border-none rounded-2xl p-4 font-medium text-slate-700 outline-none focus:ring-2 ring-primary/20"
-           placeholder="Enter brief course content..."
-         />
-      </div>
-
-      {/* Submit Button */}
-      <Button type="submit" className="w-full h-16 rounded-2xl font-black text-xl uppercase tracking-tighter col-span-2 shadow-2xl shadow-primary/30 mt-4 active:scale-95 transition-all">
-        {editingCourse ? "Update Course Info" : "Register New Course"}
-      </Button>
-    </form>
-  </DialogContent>
-</Dialog>
+            <Button onClick={handleFormSubmit} className="w-full h-16 rounded-2xl font-black text-xl uppercase tracking-tighter shadow-2xl shadow-primary/30 mt-4 active:scale-95 transition-all">
+              {editingTeacher ? "Update" : "Register"} Profile
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

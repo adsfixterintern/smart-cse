@@ -19,7 +19,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   { icon: Users, label: "All Students", href: "/admin/students" },
   { icon: BriefcaseBusiness, label: "Faculty Members", href: "/admin/teachers" },
   { icon: BookOpen, label: "Course Catalog", href: "/admin/courses" },
-  { icon: Calendar, label: "Class Routine", href: "/admin/schedules" },
+  { icon: Calendar, label: "Class Routine", href: "/admin/routines" },
   { icon: GraduationCap, label: "Exam Results", href: "/admin/results" },
   { icon: Megaphone, label: "Official Notices", href: "/admin/notices" },
   { icon: CheckSquare, label: "Attendance Logs", href: "/admin/attendance" },
