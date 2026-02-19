@@ -3,6 +3,10 @@
 import React from "react";
 import Image from "next/image";
 
+import emailjs from "@emailjs/browser";
+import toast, { Toaster } from "react-hot-toast";
+
+
 import { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -165,12 +169,47 @@ export default function ContactPage() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In the future, this will connect to Firebase
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const promise = emailjs.send(
+    process.env.NEXT_PUBLIC_SERVICE_ID as string,
+    process.env.NEXT_PUBLIC_TEMPLATE_ID as string,
+    {
+      from_name: formData.name || "No Name",
+      from_email: formData.email || "No Email",
+      phone: formData.phone || "N/A",
+      institution: formData.institution || "N/A",
+      subject: formData.subject || "General Inquiry",
+      message: formData.message || "No message",
+    },
+    process.env.NEXT_PUBLIC_PUBLIC_KEY as string
+  );
+
+  toast.promise(promise, {
+    loading: "Sending message...",
+    success: "Message sent successfully!",
+    error: "Failed to send message",
+  });
+
+  try {
+    await promise;
+
     setIsSubmitted(true);
-    setTimeout(() => setIsSubmitted(false), 3000);
-  };
+
+    // FORM RESET
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      institution: "",
+      subject: "",
+      message: "",
+    });
+
+  } catch {}
+};
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -673,7 +712,7 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-
+     
       <Footer />
     </div>
   );
