@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
+
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -29,28 +31,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault()
-  //   setIsLoading(true)
-  //   setError("")
 
-  //   // TODO: Implement Firebase Authentication
-  //   // import { signInWithEmailAndPassword } from "firebase/auth"
-  //   // import { auth } from "@/lib/firebase"
-
-  //   // try {
-  //   //   await signInWithEmailAndPassword(auth, email, password)
-  //   //   router.push("/dashboard")
-  //   // } catch (error) {
-  //   //   setError("Invalid email or password")
-  //   // }
-
-  //   // Simulating login for demo purposes
-  //   setTimeout(() => {
-  //     setIsLoading(false)
-  //     router.push("/dashboard")
-  //   }, 1500)
-  // }
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -60,12 +41,11 @@ const handleSubmit = async (e: React.FormEvent) => {
   try {
     const result = await signIn("credentials", {
       email,
-      password, // পাসওয়ার্ডটি অবশ্যই পাঠাতে হবে
+      password, 
       redirect: false,
     });
 
     if (result?.error) {
-      // স্লাইটলি বেটার এরর মেসেজ হ্যান্ডলিং
       const errorMessage = result.error === "CredentialsSignin" 
         ? "Invalid email or password" 
         : result.error;
@@ -75,12 +55,20 @@ const handleSubmit = async (e: React.FormEvent) => {
       setIsLoading(false);
     } else {
       toast.success("✅ Login successful!");
+      router.refresh();
       
-      // সেশন আপডেট হওয়ার জন্য ১ সেকেন্ড ওয়েট করে ড্যাশবোর্ডে পাঠানো
-      setTimeout(() => {
-        router.push("/dashboard");
-        router.refresh(); // সেশন যেন সাথে সাথে আপডেট হয়
-      }, 1000);
+   setTimeout(async () => {
+    const session = await getSession(); 
+    const role = (session?.user as any)?.role;
+
+    if (role === "admin") {
+      router.push("/admin");
+    } else if (role === "teacher") {
+      router.push("/teacher");
+    } else {
+      router.push("/dashboard");
+    }
+  }, 500);
     }
   } catch (err) {
     setError("Something went wrong. Please try again.");
