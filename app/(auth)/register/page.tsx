@@ -94,7 +94,7 @@ export default function RegisterPage() {
     };
 
     try {
-      const res = await fetch("http://localhost:5001/users", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -16,14 +16,17 @@ const handler = NextAuth({
         }
 
         try {
-          const res = await fetch("http://localhost:5001/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          });
+          const res = await fetch(
+  `${process.env.NEXT_PUBLIC_API_URL}/login`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: credentials.email,
+      password: credentials.password,
+    }),
+  }
+);
 
           const data = await res.json();
 
