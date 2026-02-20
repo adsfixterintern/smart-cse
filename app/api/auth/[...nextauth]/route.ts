@@ -27,7 +27,6 @@ const handler = NextAuth({
 
           const data = await res.json();
 
-          // যদি রেসপন্স ওকে হয় এবং ইউজার ডাটা থাকে
           if (res.ok && data.user) {
             return {
               id: data.user.id,
@@ -37,8 +36,6 @@ const handler = NextAuth({
               name: data.user.name || "User"
             };
           }
-          
-          // এরর থ্রো না করে সরাসরি null রিটার্ন করা নিরাপদ অথবা এরর অবজেক্ট পাঠানো
           return null; 
         } catch (error: any) {
           console.error("Auth Fetch Error:", error);

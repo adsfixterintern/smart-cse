@@ -46,6 +46,7 @@ export default function RegisterPage() {
     password: "",
     studentId: "",
     batch: "",
+    semester: "", // Added semester field
     cgpa: "",
     bloodGroup: "",
     guardianPhone: "",
@@ -67,7 +68,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Identity অনুযায়ী ডাইনামিক পেলোড তৈরি
+    // Identity অনুযায়ী ডাইনামিক পেলোড তৈরি
     const payload = {
       name: formData.fullName,
       email: formData.email,
@@ -79,6 +80,7 @@ export default function RegisterPage() {
         ? {
             studentId: formData.studentId,
             batch: formData.batch,
+            semester: formData.semester, 
             cgpa: formData.cgpa,
             bloodGroup: formData.bloodGroup,
             guardianPhone: formData.guardianPhone,
@@ -243,6 +245,22 @@ export default function RegisterPage() {
                       <div className="space-y-2">
                         <Label htmlFor="studentId">Student ID</Label>
                         <Input id="studentId" placeholder="21CSE-044" value={formData.studentId} onChange={handleChange} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Current Semester</Label>
+                        <Select onValueChange={(v) => handleSelectChange("semester", v)}>
+                          <SelectTrigger className="rounded-lg"><SelectValue placeholder="Select Semester" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1st Semester</SelectItem>
+                            <SelectItem value="2">2nd Semester</SelectItem>
+                            <SelectItem value="3">3rd Semester</SelectItem>
+                            <SelectItem value="4">4th Semester</SelectItem>
+                            <SelectItem value="5">5th Semester</SelectItem>
+                            <SelectItem value="6">6th Semester</SelectItem>
+                            <SelectItem value="7">7th Semester</SelectItem>
+                            <SelectItem value="8">8th Semester</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="batch">Batch</Label>
