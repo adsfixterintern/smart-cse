@@ -52,8 +52,10 @@ export default function FacultyManagement() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: session } = useSession();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   const [formData, setFormData] = useState({
     courseName: "",
@@ -65,15 +67,31 @@ export default function FacultyManagement() {
   });
 
   // Fetch Courses
+  // const fetchCourses = async () => {
+  //   try {
+  //     const res = await fetch(`${API_URL}/courses`, {
+  //       headers: {
+  //         Authorization: `Bearer ${session?.user?.accessToken}`,
+  //       },
+  //     });
+  //     const data = await res.json();
+  //     setCourses(data);
+  //   } catch (error) {
+  //     console.error("Error fetching courses:", error);
+  //   }
+  // };
   const fetchCourses = async () => {
     try {
-      const res = await fetch("http://localhost:5001/courses", {
+      const res = await fetch(`${API_URL}/courses`, {
         headers: {
-          Authorization: `Bearer ${session?.user?.accessToken}`,
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
         },
       });
       const data = await res.json();
-      setCourses(data);
+
+      if (Array.isArray(data)) {
+        setCourses([...data].reverse());
+      }
     } catch (error) {
       console.error("Error fetching courses:", error);
     }
@@ -99,62 +117,78 @@ export default function FacultyManagement() {
     setIsFormOpen(true);
   };
 
-  // const handleFormSubmit = async () => {
-  //   const isEdit = !!editingCourse;
-  //   const url = isEdit
-  //     ? `http://localhost:5001/courses/${editingCourse._id}`
-  //     : "http://localhost:5001/courses";
-
-  //   // Multer এর জন্য FormData ব্যবহার করতে হবে
-  //   const uploadData = new FormData();
-  //   uploadData.append("name", formData.courseName);
-  //   uploadData.append("code", formData.courseCode);
-  //   uploadData.append("teacherName", formData.teacherName);
-  //   uploadData.append("teacherId", formData.teacherId);
-  //   uploadData.append("credit", formData.credit);
-  //   uploadData.append("semester", formData.semester);
-  //   if (selectedFile) {
-  //     uploadData.append("courseImage", selectedFile);
-  //   }
-
-  //   try {
-  //     const response = await fetch(url, {
-  //       method: isEdit ? "PATCH" : "POST",
-  //       headers: {
-  //         // Note: FormData পাঠালে Content-Type হেডার ম্যানুয়ালি সেট করবেন না
-  //         Authorization: `Bearer ${session?.user?.accessToken}`,
-  //       },
-  //       body: uploadData,
-  //     });
-
-  //     const data = await response.json();
-
-  //     if (response.ok) {
-  //       toast.success(isEdit ? "Course Updated! " : "Course Added! ✅");
-  //       setIsFormOpen(false);
-  //       fetchCourses(); // Refresh list
-  //     } else {
-  //       toast.error(data.message || "Failed to save course");
-  //     }
-  //   } catch (error) {
-  //     console.error(error);
-  //     toast.error("Something went wrong");
-  //   }
-  // };
-
   const handleFormSubmit = async () => {
+    if (!formData.courseName.trim()) {
+      toast.error("Please enter the course name");
+      return;
+    }
+
+    if (!formData.courseCode.trim()) {
+      toast.error("Please enter the course code");
+      return;
+    }
+
+    if (!formData.teacherName.trim()) {
+      toast.error("Please enter the teacher name");
+      return;
+    }
+
+    if (!formData.teacherId.trim()) {
+      toast.error("Please enter the teacher ID");
+      return;
+    }
+
+    if (!formData.credit.trim()) {
+      toast.error("Please enter the course credit");
+      return;
+    }
+
+    if (!formData.semester.trim()) {
+      toast.error("Please select the semester");
+      return;
+    }
+
     const isEdit = !!editingCourse;
 
     const url = isEdit
-      ? `http://localhost:5001/courses/${editingCourse._id}`
-      : "http://localhost:5001/courses";
+      ? `${API_URL}/courses/${editingCourse._id}`
+      : `${API_URL}/courses`;
 
     try {
+      setIsSubmitting(true); // START LOADING
+
+      let imageUrl = editingCourse?.imageUrl || "";
+      
+
+      //  STEP 1: Upload Image if new file selected
+      if (selectedFile) {
+        const formDataImage = new FormData();
+        formDataImage.append("image", selectedFile);
+
+        const uploadRes = await fetch(`${API_URL}/upload-image`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${(session?.user as any).accessToken}`,
+          },
+          body: formDataImage,
+        });
+
+        const uploadData = await uploadRes.json();
+
+        if (!uploadRes.ok) {
+          toast.error(uploadData.message || "Image upload failed");
+          return;
+        }
+
+        imageUrl = uploadData.url;
+      }
+
+      //  STEP 2: Save Course
       const response = await fetch(url, {
         method: isEdit ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
+          Authorization: `Bearer ${(session?.user as any).accessToken}`,
         },
         body: JSON.stringify({
           name: formData.courseName,
@@ -163,6 +197,7 @@ export default function FacultyManagement() {
           teacherId: formData.teacherId,
           credit: formData.credit,
           semester: formData.semester,
+          imageUrl: imageUrl,
         }),
       });
 
@@ -170,18 +205,19 @@ export default function FacultyManagement() {
 
       if (response.ok) {
         toast.success(
-          isEdit
-            ? "Course Updated Successfully "
-            : "Course Added Successfully ",
+          isEdit ? "Course Updated Successfully" : "Course Added Successfully",
         );
+
         setIsFormOpen(false);
-        fetchCourses(); // refresh list
+        fetchCourses();
       } else {
-        alert(data.message || "Failed to save course");
+        toast.error(data.message || "Failed to save course");
       }
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong");
+    } finally {
+      setIsSubmitting(false); //       ALWAYS STOP LOADING
     }
   };
 
@@ -198,10 +234,10 @@ export default function FacultyManagement() {
 
     if (result.isConfirmed) {
       try {
-        const res = await fetch(`http://localhost:5001/courses/${id}`, {
+        const res = await fetch(`${API_URL}/courses/${id}`, {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${session?.user?.accessToken}`,
+            Authorization: `Bearer ${(session?.user as any).accessToken}`,
           },
         });
 
@@ -221,7 +257,7 @@ export default function FacultyManagement() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="space-y-1">
           <h1 className="text-4xl font-black italic tracking-tighter text-slate-900 uppercase underline decoration-primary decoration-4 underline-offset-8">
-            Faculty
+            Courses
           </h1>
           <p className="text-slate-500 font-medium italic text-sm pt-2 px-1">
             Manage department courses & teachers
@@ -249,6 +285,7 @@ export default function FacultyManagement() {
       </div>
 
       {/* Course Table */}
+
       <div className="bg-white rounded-[2.5rem] border overflow-hidden">
         <table className="w-full text-left">
           <TableBody>
@@ -258,37 +295,47 @@ export default function FacultyManagement() {
               )
               .map((course) => (
                 <TableRow
-                  onClick={() => setViewingCourse(course)}
                   key={course._id}
+                  onClick={() => setViewingCourse(course)}
                   className="cursor-pointer hover:bg-slate-50 transition-all group"
                 >
+                  {/* 🔹 IMAGE DOWNLOAD COLUMN */}
                   <TableCell className="px-8 py-6">
-                    <div className="h-14 w-14 border-2 border-slate-100 rounded-2xl bg-slate-50 flex items-center justify-center overflow-hidden">
-                      {course.courseImage ? (
-                        <img
-                          src={`http://localhost:5001/${course.courseImage}`}
-                          alt=""
-                          className="object-cover h-full w-full"
-                        />
-                      ) : (
-                        <BookOpen className="h-6 w-6 text-slate-300" />
-                      )}
-                    </div>
+                    {course.imageUrl ? (
+                      <a
+                        href={course.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider hover:underline"
+                      >
+                        Download
+                      </a>
+                    ) : (
+                      <span className="text-slate-300 text-xs font-bold uppercase">
+                        No Image
+                      </span>
+                    )}
                   </TableCell>
 
+                  {/* 🔹 COURSE INFO COLUMN */}
                   <TableCell className="py-6 w-full">
                     <p className="font-black text-slate-800 text-lg uppercase tracking-tight italic group-hover:text-primary transition-colors">
                       {course.name}
                     </p>
+
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 italic">
                       Code: {course.code} • Credit: {course.credit} • Semester:{" "}
                       {course.semester}
                     </p>
+
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 italic">
                       Teacher: {course.teacherName} ({course.teacherId})
                     </p>
                   </TableCell>
 
+                  {/* 🔹 ACTION COLUMN */}
                   <TableCell
                     className="text-right px-8"
                     onClick={(e) => e.stopPropagation()}
@@ -313,6 +360,7 @@ export default function FacultyManagement() {
                       >
                         <Pencil size={16} className="text-blue-600" />
                       </Button>
+
                       <Button
                         variant="outline"
                         size="icon"
@@ -491,9 +539,20 @@ export default function FacultyManagement() {
 
             <Button
               onClick={handleFormSubmit}
-              className="w-full h-16 rounded-2xl font-black text-xl uppercase tracking-tighter shadow-2xl shadow-primary/30 mt-4 active:scale-95 transition-all"
+              disabled={isSubmitting}
+              className="w-full h-16 rounded-2xl font-black text-xl uppercase tracking-tighter shadow-2xl shadow-primary/30 mt-4 active:scale-95 transition-all flex items-center justify-center gap-3"
             >
-              {editingCourse ? "Save Changes" : "Add Course"}
+              {isSubmitting && (
+                <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              )}
+
+              {isSubmitting
+                ? selectedFile
+                  ? "Uploading Image..."
+                  : "Saving..."
+                : editingCourse
+                  ? "Save Changes"
+                  : "Add Course"}
             </Button>
           </form>
         </DialogContent>
