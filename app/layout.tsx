@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import AuthProvider from "@/components/AuthProvider";
+import { UserProvider } from "@/context/UserContext";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -41,8 +42,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        <AuthProvider>
-          {children}
+       
+         <AuthProvider>
+          <UserProvider>
+            {children}
+          </UserProvider>
         </AuthProvider>
         <Toaster />
         <Analytics />

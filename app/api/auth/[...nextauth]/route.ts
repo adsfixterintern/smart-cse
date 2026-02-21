@@ -29,6 +29,7 @@ const handler = NextAuth({
 );
 
           const data = await res.json();
+          console.log(data.user)
 
           if (res.ok && data.user) {
             return {
