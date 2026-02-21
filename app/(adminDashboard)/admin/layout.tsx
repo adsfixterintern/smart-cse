@@ -20,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const adminMenu = [
    { icon: LayoutDashboard, label: "Overview", href: "/admin" },
   { icon: UserCheck, label: "Pending Approvals", href: "/admin/approvals" },
-  { icon: Users, label: "All Students", href: "/admin/users" },
+  { icon: Users, label: "All Users", href: "/admin/users" },
   { icon: BriefcaseBusiness, label: "Faculty Members", href: "/admin/teachers" },
   { icon: BookOpen, label: "Course Catalog", href: "/admin/courses" },
   { icon: Calendar, label: "Class Routine", href: "/admin/routines" },
