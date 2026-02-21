@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,196 +12,174 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Star, Trash2, MessageSquare } from "lucide-react";
+import { Search, Star, Trash2 } from "lucide-react";
 
 interface Feedback {
-  id: string;
+  _id: string;
   studentName: string;
   course: string;
   rating: number;
   message: string;
-  date: string;
+  createdAt: string;
 }
 
-const sampleFeedback: Feedback[] = [
-  {
-    id: "1",
-    studentName: "Ayesha Rahman",
-    course: "Computer Networks",
-    rating: 5,
-    message: "Excellent course structure and teaching method.",
-    date: "18 Feb 2026",
-  },
-  {
-    id: "2",
-    studentName: "Tanvir Hasan",
-    course: "Data Structures",
-    rating: 4,
-    message: "Very informative but needs more practical sessions.",
-    date: "17 Feb 2026",
-  },
-];
-
 export default function StudentFeedback() {
-  const [feedbackList, setFeedbackList] = useState(sampleFeedback);
+  const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
+  /* ================= FETCH FEEDBACK ================= */
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/feedback`,
+          {
+            credentials: "include",
+          }
+        );
+
+        const data = await res.json();
+
+        // 🔥 SAFETY: array না হলে empty array
+        const list = Array.isArray(data)
+          ? data
+          : data.data || data.feedback || [];
+
+        setFeedbackList(list);
+      } catch (error) {
+        console.error("Fetch error:", error);
+        setFeedbackList([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeedback();
+  }, []);
+
+  /* ================= DELETE FEEDBACK ================= */
+  const handleDelete = async (id: string) => {
+    const confirmDelete = confirm("Are you sure you want to delete?");
+    if (!confirmDelete) return;
+
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/feedback/${id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      setFeedbackList((prev) => prev.filter((f) => f._id !== id));
+    } catch (error) {
+      console.error("Delete failed:", error);
+    }
+  };
+
+  /* ================= SEARCH FILTER ================= */
   const filteredFeedback = useMemo(() => {
+    if (!Array.isArray(feedbackList)) return [];
+
     return feedbackList.filter(
       (f) =>
-        f.studentName.toLowerCase().includes(search.toLowerCase()) ||
-        f.course.toLowerCase().includes(search.toLowerCase()),
+        f.studentName?.toLowerCase().includes(search.toLowerCase()) ||
+        f.course?.toLowerCase().includes(search.toLowerCase())
     );
   }, [feedbackList, search]);
 
-  return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-4xl font-black italic tracking-tighter text-slate-900 uppercase underline decoration-primary decoration-4 underline-offset-8">
-          Student Feedback
-        </h1>
+  if (loading) {
+    return (
+      <div className="p-10 text-center font-bold text-muted-foreground">
+        Loading feedback...
       </div>
+    );
+  }
 
-      {/* Search */}
-      <Card className="p-6 rounded-[2.5rem] border shadow-sm bg-white">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-          <Input
-            placeholder="Search by Student or Course..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-12 h-14 bg-slate-50 border-none rounded-2xl font-bold"
-          />
-        </div>
-      </Card>
+  return (
+    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
+      {/* ================= HEADER ================= */}
+      <h1 className="text-4xl font-black italic tracking-tighter uppercase underline decoration-primary decoration-4 underline-offset-8">
+        Student Feedback
+      </h1>
 
-      {/* Feedback Content */}
-      <Card className="border-none shadow-2xl bg-white rounded-[2.5rem] overflow-hidden">
-        {/* ===== DESKTOP TABLE ===== */}
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader className="bg-slate-900">
+      {/* ================= SEARCH ================= */}
+
+
+      {/* ================= TABLE ================= */}
+      <Card className="rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <Table>
+          <TableHeader className="bg-slate-900">
+            <TableRow>
+              <TableHead className="text-white font-bold uppercase">
+                Student
+              </TableHead>
+              <TableHead className="text-white font-bold uppercase">
+                Course
+              </TableHead>
+              <TableHead className="text-white font-bold uppercase">
+                Rating
+              </TableHead>
+              <TableHead className="text-white font-bold uppercase">
+                Feedback
+              </TableHead>
+              <TableHead className="text-white font-bold uppercase text-right">
+                Action
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {filteredFeedback.length === 0 && (
               <TableRow>
-                <TableHead className="text-white font-bold py-6 italic uppercase">
-                  Student
-                </TableHead>
-                <TableHead className="text-white font-bold py-6 italic uppercase">
-                  Course
-                </TableHead>
-                <TableHead className="text-white font-bold py-6 italic uppercase">
-                  Rating
-                </TableHead>
-                <TableHead className="text-white font-bold py-6 italic uppercase">
-                  Feedback
-                </TableHead>
-                <TableHead className="text-white font-bold py-6 italic uppercase text-right">
-                  Action
-                </TableHead>
+                <TableCell
+                  colSpan={5}
+                  className="text-center py-10 text-muted-foreground"
+                >
+                  No feedback found
+                </TableCell>
               </TableRow>
-            </TableHeader>
+            )}
 
-            <TableBody>
-              {filteredFeedback.map((fb) => (
-                <TableRow
-                  key={fb.id}
-                  className="hover:bg-slate-50 transition-all"
-                >
-                  <TableCell className="font-black text-primary">
-                    {fb.studentName}
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                      {fb.date}
-                    </p>
-                  </TableCell>
-
-                  <TableCell className="font-bold">{fb.course}</TableCell>
-
-                  <TableCell>
-                    <div className="flex items-center gap-2 font-black text-yellow-500">
-                      <Star size={16} fill="currentColor" />
-                      {fb.rating}.0
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="max-w-xs text-sm text-slate-600">
-                    {fb.message}
-                  </TableCell>
-
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 rounded-xl text-red-600"
-                      onClick={() =>
-                        setFeedbackList(
-                          feedbackList.filter((f) => f.id !== fb.id),
-                        )
-                      }
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* ===== MOBILE CARD VIEW ===== */}
-        <div className="md:hidden p-4 space-y-4">
-          {filteredFeedback.map((fb) => (
-            <div
-              key={fb.id}
-              className="bg-slate-50 rounded-2xl p-5 space-y-4 shadow-sm"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-black text-primary text-lg">
-                    {fb.studentName}
+            {filteredFeedback.map((fb) => (
+              <TableRow key={fb._id} className="hover:bg-muted/40">
+                <TableCell className="font-bold text-primary">
+                  {fb.studentName}
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(fb.createdAt).toDateString()}
                   </p>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    {fb.date}
-                  </p>
-                </div>
+                </TableCell>
 
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-xl text-red-600"
-                  onClick={() =>
-                    setFeedbackList(feedbackList.filter((f) => f.id !== fb.id))
-                  }
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </div>
+                <TableCell className="font-semibold">
+                  {fb.course}
+                </TableCell>
 
-              <div>
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">
-                  Course
-                </p>
-                <p className="font-bold">{fb.course}</p>
-              </div>
+                <TableCell>
+                  <div className="flex items-center gap-2 text-yellow-500 font-bold">
+                    <Star size={16} fill="currentColor" />
+                    {fb.rating}.0
+                  </div>
+                </TableCell>
 
-              <div>
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">
-                  Rating
-                </p>
-                <div className="flex items-center gap-2 font-black text-yellow-500">
-                  <Star size={16} fill="currentColor" />
-                  {fb.rating}.0
-                </div>
-              </div>
+                <TableCell className="max-w-xs text-sm text-muted-foreground">
+                  {fb.message}
+                </TableCell>
 
-              <div>
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">
-                  Feedback
-                </p>
-                <p className="text-sm text-slate-600">{fb.message}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+                <TableCell className="text-right">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="text-red-600"
+                    onClick={() => handleDelete(fb._id)}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Card>
     </div>
   );
