@@ -1,21 +1,38 @@
+"use client";
 
-"use client"
+import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 
-import React, { useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import {
-  GraduationCap, LayoutDashboard, Users, UserCheck,
-  Megaphone, ShieldCheck, Settings, LogOut, BarChart3,
-  BriefcaseBusiness, BookOpen, Calendar, CheckSquare,
-  FileSpreadsheet, MessageSquareText, ShieldAlert,
-  Menu, X
-} from "lucide-react"
+  GraduationCap,
+  LayoutDashboard,
+  Users,
+  UserCheck,
+  Megaphone,
+  Settings,
+  LogOut,
+  BarChart3,
+  BriefcaseBusiness,
+  BookOpen,
+  Calendar,
+  CheckSquare,
+  FileSpreadsheet,
+  MessageSquareText,
+  ShieldAlert,
+  Menu,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-
-  const [isOpen, setIsOpen] = useState(false)
-  const pathname = usePathname()
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
   const adminMenu = [
    { icon: LayoutDashboard, label: "Overview", href: "/admin" },
@@ -36,13 +53,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
-
-      {/* ================= DESKTOP SIDEBAR ================= */}
+      {/* DESKTOP SIDEBAR */}
       <aside className="w-72 bg-[#0f172a] text-slate-300 hidden lg:flex flex-col shadow-2xl">
         <SidebarContent adminMenu={adminMenu} pathname={pathname} />
       </aside>
 
-      {/* ================= MOBILE DRAWER ================= */}
+      {/* MOBILE DRAWER */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <div
@@ -60,11 +76,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       )}
 
-      {/* ================= CONTENT ================= */}
+      {/* CONTENT */}
       <main className="flex-1 flex flex-col overflow-hidden">
-
         <header className="h-20 bg-white border-b px-6 lg:px-8 flex items-center justify-between sticky top-0 z-40 shadow-sm">
-
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsOpen(true)}
@@ -79,15 +93,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block leading-tight mr-2">
-              <p className="text-xs text-slate-500">Current Session</p>
-              <p className="text-sm font-bold">Spring 2026</p>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200">
-              <Settings className="h-5 w-5" />
-            </div>
+            <Button>
+              <Link href="/" className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                View Site
+              </Link>
+            </Button>
           </div>
-
         </header>
 
         <section className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -95,27 +107,44 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </section>
       </main>
     </div>
-  )
+  );
 }
-
 
 /* ================= SIDEBAR CONTENT ================= */
 
 function SidebarContent({
   adminMenu,
   pathname,
-  closeDrawer
+  closeDrawer,
 }: {
-  adminMenu: any[],
-  pathname: string,
-  closeDrawer?: () => void
+  adminMenu: any[];
+  pathname: string;
+  closeDrawer?: () => void;
 }) {
+  const router = useRouter();
+  const { data: session } = useSession();
+
+  const handleLogout = async () => {
+    if (closeDrawer) closeDrawer();
+    await signOut({ redirect: false });
+    router.push("/login");
+    router.refresh();
+  };
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return "AD";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
 
   return (
     <>
       {/* LOGO */}
       <div className="p-8 border-b border-slate-800 flex items-center justify-between">
-
         <Link href="/" className="flex items-center gap-3">
           <div className="bg-primary p-2 rounded-xl">
             <GraduationCap className="h-6 w-6 text-white" />
@@ -126,7 +155,10 @@ function SidebarContent({
         </Link>
 
         {closeDrawer && (
-          <button onClick={closeDrawer} className="text-slate-400 hover:text-white">
+          <button
+            onClick={closeDrawer}
+            className="text-slate-400 hover:text-white"
+          >
             <X />
           </button>
         )}
@@ -135,11 +167,10 @@ function SidebarContent({
       {/* MENU */}
       <nav className="flex-1 p-4 mt-4 space-y-1 overflow-y-auto">
         {adminMenu.map((item) => {
-
           const isActive =
             item.href === "/admin"
               ? pathname === "/admin"
-              : pathname.startsWith(item.href)
+              : pathname.startsWith(item.href);
 
           return (
             <Link
@@ -155,15 +186,11 @@ function SidebarContent({
             >
               <item.icon
                 className={`h-5 w-5 transition-colors
-                  ${
-                    isActive
-                      ? "text-white"
-                      : "group-hover:text-primary"
-                  }`}
+                  ${isActive ? "text-white" : "group-hover:text-primary"}`}
               />
               <span className="font-medium">{item.label}</span>
             </Link>
-          )
+          );
         })}
       </nav>
 
@@ -171,18 +198,25 @@ function SidebarContent({
       <div className="p-6 border-t border-slate-800 bg-slate-900/50">
         <div className="flex items-center gap-3 mb-6 px-2">
           <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-            AD
+            {getInitials(session?.user?.name)}
           </div>
           <div>
-            <p className="text-sm font-bold text-white">Main Admin</p>
-            <p className="text-xs opacity-60">Super User</p>
+            <p className="text-sm font-bold text-white">
+              {session?.user?.name || "Admin"}
+            </p>
+            <p className="text-xs opacity-60">
+              {(session?.user as any)?.role || "ADMIN"}
+            </p>
           </div>
         </div>
 
-        <button className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 w-full rounded-xl transition-all font-bold border border-red-500/20">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 w-full rounded-xl transition-all font-bold border border-red-500/20"
+        >
           <LogOut className="h-5 w-5" /> Sign Out
         </button>
       </div>
     </>
-  )
+  );
 }

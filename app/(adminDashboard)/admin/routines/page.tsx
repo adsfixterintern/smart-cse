@@ -358,7 +358,7 @@ export default function RoutineManagement() {
                 </SelectContent>
               </Select>
             </div>
-
+           {/* image upload  */}
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                 File Upload

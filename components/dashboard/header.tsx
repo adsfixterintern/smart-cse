@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,28 +12,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Bell, Search, Menu, X, GraduationCap, UserIcon, LogOut, SettingsIcon } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { MobileSidebar } from "./mobile-sidebar"
-import { signOut, useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useUser } from "@/context/UserContext" // Context ইমপোর্ট
 
 export function DashboardHeader() {
   const [searchOpen, setSearchOpen] = useState(false)
-  const { data: session } = useSession()
+  const { user } = useUser() // Context থেকে ডাটা নিচ্ছি
   const router = useRouter()
 
-const handleLogout = async () => {
-  const data = await signOut({
-    redirect: false,
-    callbackUrl: "/login"
-  });
-  router.push("/login");
-  router.refresh();
-};
-
-
+  const handleLogout = async () => {
+    await signOut({
+      redirect: false,
+      callbackUrl: "/login"
+    });
+    router.push("/login");
+    router.refresh();
+  };
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "SC"
@@ -79,6 +78,7 @@ const handleLogout = async () => {
           {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
         </Button>
 
+        {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
@@ -95,45 +95,43 @@ const handleLogout = async () => {
               <span className="font-medium">New Assignment Posted</span>
               <span className="text-sm text-muted-foreground">Data Structures - Due in 3 days</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <span className="font-medium">Class Rescheduled</span>
-              <span className="text-sm text-muted-foreground">Algorithm class moved to Room 301</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <span className="font-medium">Grade Published</span>
-              <span className="text-sm text-muted-foreground">Database Lab - Check your result</span>
-            </DropdownMenuItem>
+            {/* ... other items */}
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* User Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary text-primary-foreground">{getInitials(session?.user?.name)}</AvatarFallback>
+              <Avatar className="h-9 w-9 border border-border">
+                {/* Context এর ইমেজ এখানে সেট করা হয়েছে */}
+                <AvatarImage src={user?.profileImage} alt={user?.name || "User"} className="object-cover" />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {getInitials(user?.name)}
+                </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
          <DropdownMenuContent align="end" className="w-64 p-2">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-bold leading-none">{session?.user?.name || "Loading..."}</p>
-                <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
+                <p className="text-sm font-bold leading-none">{user?.name || "Loading..."}</p>
+                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                 <span className="w-fit mt-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase italic text-primary tracking-tighter">
-                  { (session?.user as any)?.role || "User" }
+                  { user?.role || "User" }
                 </span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             
             <DropdownMenuItem asChild className="cursor-pointer">
-              <Link href="/profile" className="flex items-center gap-2">
+              <Link href="/dashboard/settings" className="flex items-center gap-2">
                 <UserIcon className="h-4 w-4" /> Profile
               </Link>
             </DropdownMenuItem>
             
             <DropdownMenuItem asChild className="cursor-pointer">
-              <Link href="/settings" className="flex items-center gap-2">
+              <Link href="/dashboard/settings" className="flex items-center gap-2">
                 <SettingsIcon className="h-4 w-4" /> Settings
               </Link>
             </DropdownMenuItem>
