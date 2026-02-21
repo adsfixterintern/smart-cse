@@ -53,14 +53,16 @@ export function MobileSidebar() {
   return (
     <div className="flex h-full flex-col bg-[#0f172a] text-slate-300">
       {/* Header */}
-      <SheetHeader className="flex h-20 flex-row items-center gap-3 border-b border-slate-800 px-6 text-left">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600">
-          <GraduationCap className="h-6 w-6 text-white" />
-        </div>
-        <SheetTitle className="text-2xl font-black text-white tracking-tighter">
-          Smart<span className="text-blue-500">Student</span>
-        </SheetTitle>
-      </SheetHeader>
+<SheetHeader className="flex h-20 flex-row items-center gap-3 border-b border-slate-800 px-6 text-left">
+  <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600">
+      <GraduationCap className="h-6 w-6 text-white" />
+    </div>
+    <SheetTitle className="text-2xl font-black text-white tracking-tighter cursor-pointer">
+      Smart<span className="text-blue-500">Student</span>
+    </SheetTitle>
+  </Link>
+</SheetHeader>
 
       <ScrollArea className="flex-1 px-4 py-6">
         <div className="mb-4 px-4 text-xs font-semibold uppercase tracking-widest text-slate-500">
