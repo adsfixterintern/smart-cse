@@ -1,224 +1,338 @@
-
-
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from "axios"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { useSession } from "next-auth/react"
 
 type Status = "P" | "A" | "L"
 
 type Student = {
-  id: string
+  _id: string
   name: string
-  roll: string
+  studentId: string
+  semester: string
+  batch: string
+  role: string
 }
 
 export default function AttendanceSheetPage() {
+  const { data: session, status } = useSession()
+
   const [semester, setSemester] = useState("")
   const [batch, setBatch] = useState("")
-  const [month, setMonth] = useState("")
+  const [selectedMonth, setSelectedMonth] = useState("")
+  const [allStudents, setAllStudents] = useState<Student[]>([])
   const [students, setStudents] = useState<Student[]>([])
-  const [attendance, setAttendance] = useState<any>({})
+  const [attendance, setAttendance] = useState<Record<string, Status>>({})
+  const [monthlyData, setMonthlyData] = useState<any[]>([])
+  const [isMonthlyView, setIsMonthlyView] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  // 🔥 Demo current teacher (later from auth)
-  const currentTeacher = "Md. Hasan Ali"
+  const todayDate = new Date().toISOString().split("T")[0]
+  const currentTeacher = session?.user?.name || "Teacher"
 
-  const demoStudents: Student[] = [
-    { id: "1", name: "Rahim", roll: "2023001" },
-    { id: "2", name: "Karim", roll: "2023002" },
-    { id: "3", name: "Sakib", roll: "2023003" },
-    { id: "4", name: "Nafis", roll: "2023004" },
-  ]
+  // ================= FETCH USERS =================
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchUsers()
+    }
+  }, [status])
 
-  const generateDays = (month: string) => {
-    const days = new Date(2026, parseInt(month), 0).getDate()
-    return Array.from({ length: days }, (_, i) => i + 1)
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get("http://localhost:5001/users", {
+        headers: {
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
+        },
+      })
+
+      const studentsOnly = res.data.filter(
+        (user: Student) => user.role === "student"
+      )
+
+      setAllStudents(studentsOnly)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const loadSheet = () => {
-    if (!semester || !batch || !month) {
-      alert("Select Semester, Batch & Month")
-      return
-    }
+  const sortStudents = (list: Student[]) => {
+    return list.sort((a, b) => {
+      const getNumber = (id: string) => {
+        const last = id.split("-").pop() || "0"
+        return parseInt(last, 10)
+      }
+      return getNumber(a.studentId) - getNumber(b.studentId)
+    })
+  }
 
-    setStudents(demoStudents)
+  // ================= DAILY =================
+  const loadDailySheet = () => {
+    setIsMonthlyView(false)
 
-    const days = generateDays(month)
-    const initialData: any = {}
+    const filtered = sortStudents(
+      allStudents.filter(
+        (s) => s.semester === semester && s.batch === batch
+      )
+    )
 
-    demoStudents.forEach((student) => {
-      initialData[student.id] = {}
-      days.forEach((day) => {
-        initialData[student.id][day] = "A"
-      })
+    setStudents(filtered)
+
+    const initial: Record<string, Status> = {}
+    filtered.forEach((s) => {
+      initial[s._id] = "A"
     })
 
-    setAttendance(initialData)
+    setAttendance(initial)
   }
 
-  const handleChange = (
-    studentId: string,
-    day: number,
-    value: Status
-  ) => {
-    setAttendance((prev: any) => ({
+  const handleChange = (id: string, value: Status) => {
+    setAttendance((prev) => ({
       ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        [day]: value,
-      },
+      [id]: value,
     }))
   }
 
-  const saveSheet = () => {
-    alert("Sheet Updated Successfully ✅")
+  const saveAttendance = async () => {
+    await axios.post(
+      "http://localhost:5001/attendance",
+      {
+        semester,
+        batch,
+        date: todayDate,
+        teacher: currentTeacher,
+        attendance,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
+        },
+      }
+    )
+
+    alert("Daily Attendance Saved ✅")
   }
 
-  // 🔥 PDF Download
-  const downloadPDF = () => {
+  // ===== DAILY PDF =====
+  const downloadDailyPDF = () => {
+    if (students.length === 0) return
+
     const doc = new jsPDF("landscape")
 
     doc.setFontSize(18)
-    doc.text("Greenfield International University", 14, 15)
+    doc.text("Daily Attendance Report", 14, 15)
 
-    doc.setFontSize(12)
+    doc.setFontSize(11)
     doc.text(`Teacher: ${currentTeacher}`, 14, 25)
     doc.text(`Semester: ${semester}`, 14, 32)
     doc.text(`Batch: ${batch}`, 14, 39)
-    doc.text(`Month: ${month}`, 14, 46)
+    doc.text(`Date: ${todayDate}`, 14, 46)
 
-    const days = generateDays(month)
-
-    const tableHead = [
-      ["Roll", "Name", ...days.map((d) => d.toString())],
-    ]
+    const tableHead = [["Student ID", "Name", "Status"]]
 
     const tableBody = students.map((student) => [
-      student.roll,
+      student.studentId,
       student.name,
-      ...days.map((day) => attendance[student.id]?.[day] || "A"),
+      attendance[student._id] || "A",
     ])
 
     autoTable(doc, {
       startY: 55,
       head: tableHead,
       body: tableBody,
+    })
+
+    doc.save(`Daily_Attendance_${batch}_${semester}_${todayDate}.pdf`)
+  }
+
+  // ================= MONTHLY =================
+  const fetchMonthlyAttendance = async () => {
+    const res = await axios.get(
+      `http://localhost:5001/attendance/monthly?semester=${semester}&batch=${batch}&month=${selectedMonth}`,
+      {
+        headers: {
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
+        },
+      }
+    )
+
+    const data = res.data
+    setMonthlyData(data)
+    setIsMonthlyView(true)
+
+    if (data.length > 0) {
+      const ids = Object.keys(data[0].attendance)
+
+      const monthlyStudents = sortStudents(
+        allStudents.filter((s) => ids.includes(s._id))
+      )
+
+      setStudents(monthlyStudents)
+    }
+  }
+
+  // ===== MONTHLY PDF =====
+  const downloadMonthlyPDF = () => {
+    if (monthlyData.length === 0) return
+
+    const doc = new jsPDF("landscape")
+
+    const allDates = [
+      ...new Set(monthlyData.map((item) => item.date)),
+    ].sort()
+
+    doc.setFontSize(18)
+    doc.text("Monthly Attendance Report", 14, 15)
+
+    doc.setFontSize(11)
+    doc.text(`Teacher: ${currentTeacher}`, 14, 25)
+    doc.text(`Semester: ${semester}`, 14, 32)
+    doc.text(`Batch: ${batch}`, 14, 39)
+    doc.text(`Month: ${selectedMonth}`, 14, 46)
+    doc.text(`Generated Date: ${todayDate}`, 14, 53)
+
+    const tableHead = [["Student ID", "Name", ...allDates]]
+
+    const tableBody = students.map((student) => {
+      const row = [student.studentId, student.name]
+
+      allDates.forEach((date) => {
+        const record = monthlyData.find((d) => d.date === date)
+        const status = record?.attendance?.[student._id] || "-"
+        row.push(status)
+      })
+
+      return row
+    })
+
+    autoTable(doc, {
+      startY: 60,
+      head: tableHead,
+      body: tableBody,
       styles: { fontSize: 7 },
     })
 
-    doc.save(`Attendance_${batch}_${semester}_${month}.pdf`)
+    doc.save(
+      `Monthly_Attendance_${batch}_${semester}_${selectedMonth}.pdf`
+    )
   }
 
-  const days = month ? generateDays(month) : []
+  if (loading) return <div className="p-10">Loading...</div>
 
   return (
-    <div className="space-y-6 p-4 md:p-8">
-      <h1 className="text-xl md:text-2xl font-bold">
-        Monthly Attendance Sheet
-      </h1>
+    <div className="p-8 space-y-6">
+      <h1 className="text-2xl font-bold">Attendance System</h1>
 
-      {/* 🔎 Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-white p-4 md:p-6 rounded-xl shadow">
-        <select
-          className="border p-2 rounded w-full"
-          value={semester}
-          onChange={(e) => setSemester(e.target.value)}
-        >
-          <option value="">Select Semester</option>
-          <option value="Spring 2026">Spring 2026</option>
-          <option value="Fall 2025">Fall 2025</option>
+      <div className="grid grid-cols-4 gap-4 bg-white p-6 rounded shadow">
+        <select value={semester} onChange={(e)=>setSemester(e.target.value)} className="border p-2">
+          <option value="">Semester</option>
+          {[...Array(8)].map((_, i) => (
+            <option key={i} value={i + 1}>Semester {i + 1}</option>
+          ))}
         </select>
 
-        <select
-          className="border p-2 rounded w-full"
-          value={batch}
-          onChange={(e) => setBatch(e.target.value)}
-        >
-          <option value="">Select Batch</option>
-          <option value="Batch 2023">Batch 2023</option>
-          <option value="Batch 2022">Batch 2022</option>
+        <select value={batch} onChange={(e)=>setBatch(e.target.value)} className="border p-2">
+          <option value="">Batch</option>
+          {[...Array(20)].map((_, i) => (
+            <option key={i} value={i + 1}>Batch {i + 1}</option>
+          ))}
         </select>
 
-        <select
-          className="border p-2 rounded w-full"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-        >
-          <option value="">Select Month</option>
-          <option value="1">January</option>
-          <option value="2">February</option>
-          <option value="3">March</option>
-          <option value="4">April</option>
-        </select>
-
-        <button
-          onClick={loadSheet}
-          className="bg-blue-600 text-white rounded px-4 py-2 w-full"
-        >
-          Generate Sheet
+        <button onClick={loadDailySheet} className="bg-blue-600 text-white p-2 rounded">
+          Daily
         </button>
+
+        {!isMonthlyView && students.length > 0 && (
+          <button
+            onClick={downloadDailyPDF}
+            className="bg-purple-600 text-white p-2 rounded"
+          >
+            Download Daily PDF
+          </button>
+        )}
+
+        <select value={selectedMonth} onChange={(e)=>setSelectedMonth(e.target.value)} className="border p-2">
+          <option value="">Month</option>
+          {[...Array(12)].map((_, i) => (
+            <option key={i} value={i + 1}>{i + 1}</option>
+          ))}
+        </select>
+
+        <button onClick={fetchMonthlyAttendance} className="bg-orange-600 text-white p-2 rounded">
+          Load Monthly
+        </button>
+
+        {isMonthlyView && (
+          <button
+            onClick={downloadMonthlyPDF}
+            className="bg-red-600 text-white p-2 rounded"
+          >
+            Download Monthly PDF
+          </button>
+        )}
       </div>
 
-      {/*  Sheet */}
       {students.length > 0 && (
-        <div className="bg-white p-4 md:p-6 rounded-xl shadow overflow-x-auto">
-          <table className="min-w-max border text-xs md:text-sm">
+        <div className="bg-white p-6 rounded shadow overflow-x-auto">
+          <table className="w-full border">
             <thead>
               <tr>
-                <th className="border p-2">Roll</th>
+                <th className="border p-2">ID</th>
                 <th className="border p-2">Name</th>
-                {days.map((day) => (
-                  <th key={day} className="border p-2">
-                    {day}
-                  </th>
-                ))}
+                {isMonthlyView
+                  ? [...new Set(monthlyData.map((d) => d.date))]
+                      .sort()
+                      .map((date) => (
+                        <th key={date} className="border p-2">{date}</th>
+                      ))
+                  : <th className="border p-2">{todayDate}</th>}
               </tr>
             </thead>
             <tbody>
-              {students.map((student) => (
-                <tr key={student.id}>
-                  <td className="border p-2">{student.roll}</td>
-                  <td className="border p-2">{student.name}</td>
-                  {days.map((day) => (
-                    <td key={day} className="border p-2 text-center">
-                      <select
-                        value={attendance[student.id]?.[day]}
-                        onChange={(e) =>
-                          handleChange(
-                            student.id,
-                            day,
-                            e.target.value as Status
+              {students.map((s) => (
+                <tr key={s._id}>
+                  <td className="border p-2">{s.studentId}</td>
+                  <td className="border p-2">{s.name}</td>
+                  {isMonthlyView
+                    ? [...new Set(monthlyData.map((d) => d.date))]
+                        .sort()
+                        .map((date) => {
+                          const record = monthlyData.find((d) => d.date === date)
+                          return (
+                            <td key={date} className="border p-2 text-center">
+                              {record?.attendance?.[s._id] || "-"}
+                            </td>
                           )
-                        }
-                        className="border rounded text-xs p-2"
-                      >
-                        <option value="P">P</option>
-                        <option value="A">A</option>
-                        <option value="L">L</option>
-                      </select>
-                    </td>
-                  ))}
+                        })
+                    : (
+                      <td className="border p-2 text-center">
+                        <select
+                          value={attendance[s._id]}
+                          onChange={(e)=>handleChange(s._id, e.target.value as Status)}
+                        >
+                          <option value="P">P</option>
+                          <option value="A">A</option>
+                          <option value="L">L</option>
+                        </select>
+                      </td>
+                    )}
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div className="flex flex-col sm:flex-row gap-4 mt-6">
+          {!isMonthlyView && (
             <button
-              onClick={saveSheet}
-              className="bg-green-600 text-white px-6 py-2 rounded w-full sm:w-auto"
+              onClick={saveAttendance}
+              className="mt-4 bg-green-600 text-white px-4 py-2 rounded"
             >
-              Save Sheet
+              Save
             </button>
-
-            <button
-              onClick={downloadPDF}
-              className="bg-purple-600 text-white px-6 py-2 rounded w-full sm:w-auto"
-            >
-              Download PDF
-            </button>
-          </div>
+          )}
         </div>
       )}
     </div>

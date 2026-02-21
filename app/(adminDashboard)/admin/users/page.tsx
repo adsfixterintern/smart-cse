@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 import { useSession } from "next-auth/react";
-import emailjs from "@emailjs/browser";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,6 +44,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface CustomSession {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    accessToken?: string;
+  };
+}
+
 interface UserType {
   _id: string;
   name?: string;
@@ -68,6 +76,7 @@ interface UserType {
 
 export default function AllUsersPage() {
   const { data: session, status } = useSession();
+  
 
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +90,7 @@ export default function AllUsersPage() {
 
   //
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.accessToken) {
+    if (status === "authenticated" && (session?.user as { accessToken?: string })?.accessToken) {
       fetchUsers();
     }
   }, [session, status]);
@@ -92,7 +101,7 @@ export default function AllUsersPage() {
 
       const res = await axios.get("http://localhost:5001/users", {
         headers: {
-          Authorization: `Bearer ${session?.user?.accessToken}`,
+          Authorization: `Bearer ${(session?.user as { accessToken?: string })?.accessToken}`,
         },
       });
       console.log(res.data);
@@ -113,7 +122,7 @@ export default function AllUsersPage() {
       { role: newRole },
       {
         headers: {
-          Authorization: `Bearer ${session?.user?.accessToken}`,
+          Authorization: `Bearer ${(session?.user as { accessToken?: string })?.accessToken}`,
         },
       },
     );
@@ -123,7 +132,7 @@ export default function AllUsersPage() {
   const deleteUser = async (id: string) => {
     await axios.delete(`http://localhost:5001/users/${id}`, {
       headers: {
-        Authorization: `Bearer ${session?.user?.accessToken}`,
+        Authorization: `Bearer ${(session?.user as { accessToken?: string })?.accessToken}`,
       },
     });
     fetchUsers();
@@ -135,7 +144,7 @@ export default function AllUsersPage() {
       { banned: !currentStatus },
       {
         headers: {
-          Authorization: `Bearer ${session?.user?.accessToken}`,
+          Authorization: `Bearer ${(session?.user as { accessToken?: string })?.accessToken}`,
         },
       },
     );
