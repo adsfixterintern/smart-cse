@@ -48,7 +48,7 @@ export default function AdminLayout({
     { icon: GraduationCap, label: "Exam Results", href: "/admin/results" },
     { icon: Megaphone, label: "Official Notices", href: "/admin/notices" },
     { icon: CheckSquare, label: "Attendance Logs", href: "/admin/attendance" },
-    { icon: FileSpreadsheet, label: "Financials", href: "/admin/finance" },
+
     {
       icon: MessageSquareText,
       label: "Student Feedback",
