@@ -54,6 +54,7 @@ export function DashboardSidebar() {
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-72 bg-[#0f172a] text-slate-300 border-r border-slate-800 lg:flex flex-col">
       
       {/* LOGO SECTION */}
+      <Link href={'/'}>
       <div className="p-8 border-b border-slate-800 flex items-center gap-3">
         <div className="bg-blue-600 p-2 rounded-xl">
           <GraduationCap className="h-6 w-6 text-white" />
@@ -62,6 +63,7 @@ export function DashboardSidebar() {
           Smart<span className="text-blue-500">Student</span>
         </span>
       </div>
+      </Link>
 
       {/* MENU SECTION */}
       <ScrollArea className="flex-1 px-4 py-6">
