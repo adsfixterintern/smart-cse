@@ -1,259 +1,450 @@
-"use client"
+"use client";
 
-import React, { useState, useMemo } from "react"
-import { CldUploadWidget, CloudinaryUploadWidgetResults } from "next-cloudinary"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { 
-  Plus, Pencil, Trash2, Calendar, Search, Image as ImageIcon, X 
-} from "lucide-react"
-import Image from "next/image"
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
-} from "@/components/ui/dialog"
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table"
+import React, { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import Image from "next/image";
+import toast from "react-hot-toast";
+import Swal from "sweetalert2";
 
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Eye,
+  Search,
+  Image as ImageIcon,
+  X,
+  Loader2,
+  Calendar,
+} from "lucide-react";
+
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+/* ================= TYPES ================= */
 interface Notice {
-  id: string;
+  _id: string;
   title: string;
-  content: string;
-  imageUrl: string;
+  description: string;
+  imageUrl?: string;
+  imagePublicId?: string;
   createdAt: string;
 }
 
-const sampleNotices: Notice[] = [
-  { id: "1", title: "Final Exam Routine Spring 2026", content: "The final examinations for all batches will commence from March 15. Students are advised to collect admit cards from the office.", imageUrl: "", createdAt: "2026-02-18" },
-  { id: "2", title: "Workshop on Next.js & Tailwind", content: "Join us for a hands-on workshop on modern web development. Registration mandatory for all CSE students.", imageUrl: "https://res.cloudinary.com/demo/image/upload/v1631234567/sample.jpg", createdAt: "2026-02-17" },
-]
-
+/* ================= COMPONENT ================= */
 export default function AdminNotices() {
-  const [notices, setNotices] = useState<Notice[]>(sampleNotices)
-  const [viewingNotice, setViewingNotice] = useState<Notice | null>(null)
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingNotice, setEditingNotice] = useState<Notice | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
+  const { data: session } = useSession();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [imageUrl, setImageUrl] = useState("")
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredNotices = useMemo(() => {
-    return notices.filter(n => n.title.toLowerCase().includes(searchQuery.toLowerCase()))
-  }, [notices, searchQuery])
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  const [viewingNotice, setViewingNotice] = useState<Notice | null>(null);
 
-  const handleOpenAdd = () => {
-    setEditingNotice(null)
-    setTitle(""); setContent(""); setImageUrl("")
-    setIsFormOpen(true)
-  }
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [imagePublicId, setImagePublicId] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleOpenEdit = (e: React.MouseEvent, notice: Notice) => {
-    e.stopPropagation() 
-    setEditingNotice(notice)
-    setTitle(notice.title); setContent(notice.content); setImageUrl(notice.imageUrl)
-    setIsFormOpen(true)
-  }
+  /* ================= FETCH ================= */
+  const fetchNotices = async () => {
+    try {
+      const token = (session?.user as any)?.accessToken;
+      if (!token) return;
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation() 
-    if (window.confirm("Are you sure you want to delete this notice?")) {
-      setNotices(notices.filter(n => n.id !== id))
+      const res = await fetch(`${API_URL}/notices`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setNotices(data);
+    } catch (err) {
+      console.error(err);
     }
-  }
+  };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (editingNotice) {
-      setNotices(notices.map(n => n.id === editingNotice.id ? { ...n, title, content, imageUrl } : n))
-    } else {
-      const newNotice: Notice = {
-        id: Math.random().toString(36).substr(2, 9),
-        title, content, imageUrl,
-        createdAt: new Date().toISOString().split('T')[0],
+  useEffect(() => {
+    fetchNotices();
+  }, [session]);
+
+  /* ================= IMAGE UPLOAD ================= */
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await fetch(`${API_URL}/upload-image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setImageUrl(data.url);
+        setImagePublicId(data.public_id);
+        toast.success("Image uploaded");
+      } else {
+        toast.error("Upload failed");
       }
-      setNotices([newNotice, ...notices])
+    } catch {
+      toast.error("Upload error");
+    } finally {
+      setIsUploading(false);
     }
-    setIsFormOpen(false)
-  }
+  };
 
+  /* ================= CREATE / UPDATE ================= */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = {
+      title,
+      description,
+      imageUrl,
+      publicId: imagePublicId,
+    };
+
+    const url = editingNotice
+      ? `${API_URL}/notices/${editingNotice._id}`
+      : `${API_URL}/notices`;
+
+    const method = editingNotice ? "PATCH" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success(editingNotice ? "Notice updated" : "Notice created");
+        fetchNotices();
+        closeForm();
+      }
+    } catch {
+      toast.error("Save failed");
+    }
+  };
+
+  /* ================= DELETE ================= */
+  const handleDelete = async (notice: Notice) => {
+    const result = await Swal.fire({
+      title: "Delete notice?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`${API_URL}/notices/${notice._id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
+        },
+      });
+
+      if (res.ok) {
+        setNotices((prev) => prev.filter((n) => n._id !== notice._id));
+        Swal.fire("Deleted!", "", "success");
+      }
+    } catch {
+      Swal.fire("Error", "Delete failed", "error");
+    }
+  };
+
+  /* ================= HELPERS ================= */
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingNotice(null);
+    setTitle("");
+    setDescription("");
+    setImageUrl("");
+    setImagePublicId("");
+  };
+
+  const filteredNotices = useMemo(
+    () =>
+      notices.filter((n) =>
+        n.title.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [notices, searchQuery],
+  );
+
+  /* ================= UI ================= */
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-      
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-1">
-          <h1 className="text-4xl font-black italic tracking-tighter text-slate-900">NOTICES</h1>
-          <p className="text-slate-500 font-medium italic text-sm">Manage official department announcements</p>
-        </div>
-        <Button onClick={handleOpenAdd} className="bg-primary hover:bg-primary/90 h-14 px-8 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95">
-          <Plus className="mr-2 h-6 w-6 stroke-[3px]" /> CREATE NEW
+    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
+      {/* HEADER */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-4xl font-black italic tracking-tighter text-slate-900 uppercase underline decoration-primary decoration-4 underline-offset-8">
+          All Notices
+        </h1>
+
+        <Button
+          onClick={() => setIsFormOpen(true)}
+          className="h-14 px-8 rounded-2xl font-black text-lg shadow-xl"
+        >
+          <Plus className="mr-2" /> ADD NEW
         </Button>
       </div>
 
-      {/* Control Bar */}
-      <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-center">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-          <Input 
-            placeholder="Search by title..." 
-            className="pl-12 h-12 bg-slate-50 border-none rounded-2xl focus:ring-2 ring-primary/20"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="px-4 py-2 bg-slate-100 rounded-full text-xs font-black text-slate-500 uppercase tracking-widest">
-          {filteredNotices.length} Records Found
-        </div>
+      {/* SEARCH */}
+
+      {/* ================= DESKTOP TABLE ================= */}
+      <div className="hidden md:block">
+        <Card className="border-none shadow-2xl bg-white rounded-[2.5rem] overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-900">
+              <TableRow>
+                <TableHead className="text-white font-bold py-6 px-8 uppercase italic">
+                  Notice
+                </TableHead>
+                <TableHead className="text-white font-bold py-6 uppercase italic">
+                  Date
+                </TableHead>
+                <TableHead className="text-white font-bold py-6 uppercase italic text-right px-8">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredNotices.map((notice) => (
+                <TableRow
+                  key={notice._id}
+                  className="hover:bg-slate-50 transition"
+                >
+                  {/* TITLE */}
+                  <TableCell className="px-8 py-6">
+                    <p className="font-bold text-slate-800 text-base truncate max-w-[420px]">
+                      {notice.title}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {new Date(notice.createdAt).toLocaleDateString()}
+                    </p>
+                  </TableCell>
+
+                  {/* EMPTY / TYPE */}
+                  <TableCell className="py-6">
+                    <span className="text-xs text-slate-500">Notice</span>
+                  </TableCell>
+
+                  {/* ACTIONS */}
+                  <TableCell className="text-right px-8">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setViewingNotice(notice)}
+                      >
+                        <Eye size={16} />
+                      </Button>
+
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingNotice(notice);
+                          setTitle(notice.title);
+                          setDescription(notice.description);
+                          setImageUrl(notice.imageUrl || "");
+                          setImagePublicId(notice.imagePublicId || "");
+                          setIsFormOpen(true);
+                        }}
+                      >
+                        <Pencil size={16} />
+                      </Button>
+
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-red-500"
+                        onClick={() => handleDelete(notice)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
 
-      {/* Table Content */}
-      <Card className="border-none shadow-2xl bg-white rounded-[2.5rem] overflow-hidden">
-        <Table>
-          <TableHeader className="bg-slate-900 border-none">
-            <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="w-24 px-8 text-white font-bold py-6 italic uppercase tracking-widest">Media</TableHead>
-              <TableHead className="text-white font-bold py-6 italic uppercase tracking-widest">Information</TableHead>
-              <TableHead className="text-right px-8 text-white font-bold py-6 italic uppercase tracking-widest">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredNotices.map((notice) => (
-              <TableRow 
-                key={notice.id} 
-                className="cursor-pointer hover:bg-slate-50/80 border-b border-slate-100 transition-all group"
-                onClick={() => setViewingNotice(notice)}
-              >
-                <TableCell className="px-8 py-6">
-                  <div className="h-16 w-16 border-2 border-slate-100 rounded-2xl bg-slate-50 relative overflow-hidden flex items-center justify-center shadow-inner group-hover:border-primary/40 transition-colors">
-                    {notice.imageUrl ? (
-                      <Image src={notice.imageUrl} alt="" fill className="object-cover" />
-                    ) : (
-                      <ImageIcon className="h-6 w-6 text-slate-300" />
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="py-6">
-                  <div className="space-y-1">
-                    <p className="font-black text-slate-800 text-lg group-hover:text-primary transition-colors uppercase tracking-tight italic">{notice.title}</p>
-                    <div className="flex items-center gap-3">
-                       <span className="flex items-center text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">
-                          <Calendar className="h-3 w-3 mr-1" /> {notice.createdAt}
-                       </span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right px-8" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-end gap-3">
-                    <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl hover:bg-blue-50 hover:text-blue-600 border-slate-200" onClick={(e) => handleOpenEdit(e, notice)}>
-                      <Pencil className="h-5 w-5" />
-                    </Button>
-                    <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl hover:bg-red-50 hover:text-red-600 border-slate-200" onClick={(e) => handleDelete(e, notice.id)}>
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      {/* ================= MOBILE VIEW ================= */}
+      <div className="md:hidden space-y-4">
+        {filteredNotices.map((notice) => (
+          <Card key={notice._id} className="p-5 rounded-3xl shadow-lg">
+            <p className="font-black text-lg uppercase">{notice.title}</p>
+            <p className="text-sm text-slate-500">
+              {new Date(notice.createdAt).toDateString()}
+            </p>
 
-      {/* --- FIXED VIEW MODAL --- */}
-      <Dialog open={!!viewingNotice} onOpenChange={() => setViewingNotice(null)}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
-          {/* Accessibility fix: Added DialogHeader with Title and Description */}
+            <div className="mt-4 flex justify-between items-center">
+              <span className="text-xs font-bold bg-slate-100 px-3 py-1 rounded-full uppercase">
+                Official
+              </span>
+
+              <div className="flex gap-2">
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => setViewingNotice(notice)}
+                >
+                  <Eye size={16} />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => setEditingNotice(notice)}
+                >
+                  <Pencil size={16} />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="text-red-600"
+                  onClick={() => handleDelete(notice)}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* ================= VIEW MODAL ================= */}
+      <Dialog
+        open={!!viewingNotice}
+        onOpenChange={() => setViewingNotice(null)}
+      >
+        <DialogContent className="max-w-2xl p-0 rounded-[2.5rem] overflow-hidden border-none shadow-2xl">
           <DialogHeader className="sr-only">
-            <DialogTitle>{viewingNotice?.title || "Notice Details"}</DialogTitle>
-            <DialogDescription>Full description of the departmental notice.</DialogDescription>
+            <DialogTitle>Notice</DialogTitle>
+            <DialogDescription>Notice details</DialogDescription>
           </DialogHeader>
 
           {viewingNotice?.imageUrl && (
-            <div className="relative h-72 w-full bg-slate-900 border-b-4 border-primary">
-              <Image src={viewingNotice.imageUrl} alt="" fill className="object-contain p-4" />
+            <div className="relative h-64 bg-black">
+              <Image
+                src={viewingNotice.imageUrl}
+                alt=""
+                fill
+                className="object-contain"
+              />
             </div>
           )}
+
           <div className="p-10 space-y-4 bg-white">
-            <span className="bg-primary/10 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase italic tracking-widest">Official Post</span>
-            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">{viewingNotice?.title}</h2>
-            <div className="pt-6 border-t border-slate-100">
-               <p className="text-slate-600 leading-relaxed font-medium italic whitespace-pre-wrap">{viewingNotice?.content}</p>
-            </div>
-            <div className="pt-8 flex justify-between items-center text-slate-400">
-               <div className="flex items-center text-xs font-bold uppercase tracking-widest">
-                  <Calendar className="h-4 w-4 mr-2" /> {viewingNotice?.createdAt}
-               </div>
-               <Button onClick={() => setViewingNotice(null)} className="rounded-xl px-10 font-bold">DISMISS</Button>
-            </div>
+            <h2 className="text-3xl font-black uppercase italic">
+              {viewingNotice?.title}
+            </h2>
+            <p className="font-medium italic text-slate-600 whitespace-pre-wrap">
+              {viewingNotice?.description}
+            </p>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* --- FIXED ADD / EDIT FORM MODAL --- */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-xl p-10 rounded-[2.5rem] border-none shadow-2xl">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-3xl font-black italic tracking-tighter uppercase leading-none">
-              {editingNotice ? "Modify" : "New"} Post
+      {/* ================= FORM MODAL ================= */}
+      <Dialog open={isFormOpen} onOpenChange={closeForm}>
+        <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-black italic uppercase">
+              {editingNotice ? "Edit" : "New"} Notice
             </DialogTitle>
-            <DialogDescription className="italic font-medium text-slate-400">Update or create a new notice for the department.</DialogDescription>
+            <DialogDescription>Create or update notice</DialogDescription>
           </DialogHeader>
-          
-          <form className="space-y-6" onSubmit={handleFormSubmit}>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Notice Title" className="h-14 bg-slate-50 border-none rounded-2xl font-bold text-lg" required />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Description</Label>
-              <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} placeholder="Full Details..." className="bg-slate-50 border-none rounded-2xl font-medium italic p-4" required />
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Featured Image</Label>
-              {imageUrl ? (
-                <div className="relative h-48 w-full rounded-3xl border-4 border-slate-50 overflow-hidden group">
-                  <Image src={imageUrl} alt="" fill className="object-cover" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button type="button" variant="destructive" size="icon" className="h-12 w-12 rounded-full shadow-2xl" onClick={() => setImageUrl("")}>
-                      <X className="h-6 w-6" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <CldUploadWidget 
-                  uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
-                  onSuccess={(result: CloudinaryUploadWidgetResults) => {
-                    if (result.info && typeof result.info !== "string") {
-                      setImageUrl(result.info.secure_url);
-                    }
+
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Title"
+              required
+            />
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Description"
+              rows={5}
+              required
+            />
+
+            {imageUrl ? (
+              <div className="relative h-40 rounded-2xl overflow-hidden">
+                <Image src={imageUrl} alt="" fill className="object-cover" />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="destructive"
+                  className="absolute top-2 right-2"
+                  onClick={() => {
+                    setImageUrl("");
+                    setImagePublicId("");
                   }}
                 >
-                  {({ open }) => (
-                    <div 
-                      className="w-full h-32 border-4 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center gap-2 hover:bg-slate-50 hover:border-primary/20 transition-all cursor-pointer group"
-                      onClick={() => open()}
-                    >
-                      <div className="p-3 bg-white rounded-full shadow-md text-slate-400 group-hover:text-primary transition-colors">
-                        <ImageIcon className="h-6 w-6" />
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Click to Upload</span>
-                    </div>
-                  )}
-                </CldUploadWidget>
-              )}
-            </div>
+                  <X />
+                </Button>
+              </div>
+            ) : (
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={isUploading}
+              />
+            )}
 
-            <Button type="submit" className="w-full h-16 rounded-2xl font-black text-xl shadow-2xl shadow-primary/30 uppercase tracking-tighter">
-              {editingNotice ? "Update" : "Publish"} Announcement
+            <Button
+              type="submit"
+              disabled={isUploading}
+              className="w-full h-14 font-black uppercase"
+            >
+              {editingNotice ? "Update" : "Publish"}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
