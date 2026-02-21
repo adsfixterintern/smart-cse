@@ -16,20 +16,17 @@ const handler = NextAuth({
         }
 
         try {
-          const res = await fetch(
-  `${process.env.NEXT_PUBLIC_API_URL}/login`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: credentials.email,
-      password: credentials.password,
-    }),
-  }
-);
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
 
           const data = await res.json();
-          console.log(data.user)
+          console.log(data.user);
 
           if (res.ok && data.user) {
             return {
@@ -37,21 +34,21 @@ const handler = NextAuth({
               email: data.user.email,
               role: data.user.role || "student",
               accessToken: data.token,
-              name: data.user.name || "User"
+              name: data.user.name || "User",
             };
           }
-          return null; 
+          return null;
         } catch (error: any) {
           console.error("Auth Fetch Error:", error);
           return null;
         }
-      }
+      },
     }),
   ],
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, 
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   callbacks: {
@@ -76,10 +73,10 @@ const handler = NextAuth({
 
   pages: {
     signIn: "/login",
-    error: "/login", 
-    signOut:'/login'
+    error: "/login",
+    signOut: "/login",
   },
-  
+
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev-only",
 });
 
