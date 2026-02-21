@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { useUser } from "@/context/UserContext"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
+import { useRouter } from "next/navigation"
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -29,6 +30,7 @@ export function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false) // Desktop hover state
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const { user } = useUser()
+  const router = useRouter()
 
   const isLoggedIn = !!user
 
@@ -37,6 +39,16 @@ export function Navbar() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     setIsDropdownOpen(true)
   }
+
+ const handleLogOut = async () => {
+    await signOut({
+      redirect: false,
+      callbackUrl: "/login"
+    });
+    router.push("/login");
+    router.refresh();
+  };
+
 
   // হোভার শেষ হলে ২০০ মিলিসেকেন্ড ডিলে করবে যেন ইউজার মাউস মেনুতে নিতে পারে
   const handleMouseLeave = () => {
@@ -146,7 +158,7 @@ export function Navbar() {
                     <div className="h-px bg-border my-1" />
                     
                     <button 
-                      onClick={() => signOut({ callbackUrl: "/" })}
+                      onClick={handleLogOut}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold text-destructive transition-colors hover:bg-destructive/10"
                     >
                       <LogOut className="h-4 w-4" /> 
