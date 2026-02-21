@@ -35,29 +35,21 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   const adminMenu = [
-    { icon: LayoutDashboard, label: "Overview", href: "/admin" },
-    { icon: UserCheck, label: "Pending Approvals", href: "/admin/approvals" },
-    { icon: Users, label: "All Students", href: "/admin/users" },
-    {
-      icon: BriefcaseBusiness,
-      label: "Faculty Members",
-      href: "/admin/teachers",
-    },
-    { icon: BookOpen, label: "Course Catalog", href: "/admin/courses" },
-    { icon: Calendar, label: "Class Routine", href: "/admin/routines" },
-    { icon: GraduationCap, label: "Exam Results", href: "/admin/results" },
-    { icon: Megaphone, label: "Official Notices", href: "/admin/notices" },
-    { icon: CheckSquare, label: "Attendance Logs", href: "/admin/attendance" },
-
-    {
-      icon: MessageSquareText,
-      label: "Student Feedback",
-      href: "/admin/student-feedback",
-    },
-
-    { icon: Settings, label: "General Settings", href: "/admin/settings" },
-    
-  ];
+   { icon: LayoutDashboard, label: "Overview", href: "/admin" },
+  { icon: UserCheck, label: "Pending Approvals", href: "/admin/approvals" },
+  { icon: Users, label: "All Users", href: "/admin/users" },
+  { icon: BriefcaseBusiness, label: "Faculty Members", href: "/admin/teachers" },
+  { icon: BookOpen, label: "Course Catalog", href: "/admin/courses" },
+  { icon: Calendar, label: "Class Routine", href: "/admin/routines" },
+  { icon: GraduationCap, label: "Exam Results", href: "/admin/results" },
+  { icon: Megaphone, label: "Official Notices", href: "/admin/notices" },
+  { icon: CheckSquare, label: "Attendance Logs", href: "/admin/attendance" },
+  { icon: FileSpreadsheet, label: "Financials", href: "/admin/finance" },
+  { icon: MessageSquareText, label: "Student Feedback", href: "/admin/student-feedback" },
+  { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
+  { icon: Settings, label: "General Settings", href: "/admin/settings" },
+  { icon: ShieldAlert, label: "Security Logs", href: "/admin/security-logs" },
+  ]
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
