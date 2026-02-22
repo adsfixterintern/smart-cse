@@ -32,7 +32,7 @@ const teacherNavItems = [
   { href: "/teacher/students", label: "Students", icon: Users },
   { href: "/teacher/attendance", label: "Attendance", icon: ClipboardCheck },
   { href: "/teacher/results", label: "Results", icon: BarChart3 },
-  { href: "/teacher/feedback", label: "Student Feedback", icon: MessageSquareText },
+  { href: "/teacher/student-feedback", label: "Student Feedback", icon: MessageSquareText },
 ]
 
 export function TeacherSidebar() {
