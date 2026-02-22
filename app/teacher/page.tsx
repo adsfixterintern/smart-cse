@@ -33,62 +33,42 @@ interface Course {
 
 export default function TeacherDashboardPage() {
   const { data: session } = useSession();
-  const API_RUL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const teacherId = (session?.user as any)?.id;
-  const token = (session?.user as any)?.accessToken;
-
   useEffect(() => {
-    if (!teacherId || !token) return;
+    if (!session?.user?.email || !(session.user as any)?.accessToken) {
+      setLoading(false);
+      return;
+    }
 
     const fetchCourses = async () => {
       try {
-<<<<<<< HEAD
-        const res = await fetch(`${API_RUL}/courses`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-=======
         const res = await fetch(
-          `http://localhost:5001/teacher/dashboard-overview?email=${session?.user?.email}`,
+          `${API_URL}/teacher/dashboard-overview?email=${session?.user?.email}`,
           {
             headers: {
-              Authorization: `Bearer ${(session as any)?.user?.accessToken || ""}`,
+              Authorization: `Bearer ${(session.user as any).accessToken}`,
             },
           }
-        )
-        const result = await res.json()
-        setData(result)
-      } catch (err) {
-        console.error("Teacher dashboard load failed", err)
-      } finally {
-        setLoading(false)
-      }
-    }
->>>>>>> 9a7939f2df4399f71956279999b9a7dd11fbb1b3
-
-        const data = await res.json();
-
-        //  Filter by teacherId
-        const myCourses = data.filter(
-          (course: Course) => course.teacherId === teacherId,
         );
 
-        console.log("My Courses:", myCourses);
+        if (!res.ok) throw new Error("Failed to fetch courses");
 
-        setCourses(myCourses);
-      } catch (err) {
-        console.error("Failed to load courses", err);
+        const data: Course[] = await res.json();
+        setCourses(data);
+      } catch (error) {
+        console.error("Teacher dashboard load failed:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCourses();
-  }, [teacherId, token]);
+  }, [session, API_URL]);
 
   const totalCourses = useMemo(() => courses.length, [courses]);
 
@@ -140,7 +120,7 @@ export default function TeacherDashboardPage() {
             <TableBody>
               {courses.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={6} className="py-8 text-center">
                     No courses found
                   </TableCell>
                 </TableRow>
@@ -152,19 +132,14 @@ export default function TeacherDashboardPage() {
                     <img
                       src={course.imageUrl}
                       alt={course.name}
-                      className="h-12 w-20 object-cover rounded-lg"
+                      className="h-12 w-20 rounded-lg object-cover"
                     />
                   </TableCell>
-
                   <TableCell className="font-bold">{course.name}</TableCell>
-
                   <TableCell>{course.code}</TableCell>
-
                   <TableCell>{course.semester}</TableCell>
-
                   <TableCell>{course.credit}</TableCell>
-
-                  <TableCell>{course.resources?.length || 0}</TableCell>
+                  <TableCell>{course.resources?.length ?? 0}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
