@@ -5,6 +5,7 @@ import axios from "axios"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { useSession } from "next-auth/react"
+import toast from "react-hot-toast"
 
 type Status = "P" | "A" | "L"
 
@@ -22,6 +23,7 @@ export default function AttendanceSheetPage() {
 
   const [semester, setSemester] = useState("")
   const [batch, setBatch] = useState("")
+  const [course, setCourse] = useState("")
   const [selectedMonth, setSelectedMonth] = useState("")
   const [allStudents, setAllStudents] = useState<Student[]>([])
   const [students, setStudents] = useState<Student[]>([])
@@ -32,6 +34,24 @@ export default function AttendanceSheetPage() {
 
   const todayDate = new Date().toISOString().split("T")[0]
   const currentTeacher = session?.user?.name || "Teacher"
+
+  // ================= COURSE LIST =================
+  const majorCourses = [
+    "CSE-1101 Structured Programming",
+    "CSE-1102 Structured Programming Lab",
+    "CSE-2101 Data Structures",
+    "CSE-2102 Data Structures Lab",
+    "CSE-2201 Algorithms",
+    "CSE-3101 Database Management System",
+    "CSE-4101 Artificial Intelligence"
+  ]
+
+  const nonMajorCourses = [
+    "CSE-1011 Computer Fundamentals",
+    "CSE-1012 Computer Fundamentals Lab",
+    "CSE-2011 ICT",
+    "CSE-3011 Web Technology"
+  ]
 
   // ================= FETCH USERS =================
   useEffect(() => {
@@ -72,6 +92,11 @@ export default function AttendanceSheetPage() {
 
   // ================= DAILY =================
   const loadDailySheet = () => {
+    if (!semester || !batch || !course) {
+      alert("Please select Semester, Batch & Course")
+      return
+    }
+
     setIsMonthlyView(false)
 
     const filtered = sortStudents(
@@ -103,6 +128,7 @@ export default function AttendanceSheetPage() {
       {
         semester,
         batch,
+        course,
         date: todayDate,
         teacher: currentTeacher,
         attendance,
@@ -114,10 +140,10 @@ export default function AttendanceSheetPage() {
       }
     )
 
-    alert("Daily Attendance Saved ✅")
+    toast.success('Successfully toasted!')
   }
 
-  // ===== DAILY PDF =====
+  // ================= DAILY PDF =================
   const downloadDailyPDF = () => {
     if (students.length === 0) return
 
@@ -130,7 +156,8 @@ export default function AttendanceSheetPage() {
     doc.text(`Teacher: ${currentTeacher}`, 14, 25)
     doc.text(`Semester: ${semester}`, 14, 32)
     doc.text(`Batch: ${batch}`, 14, 39)
-    doc.text(`Date: ${todayDate}`, 14, 46)
+    doc.text(`Course: ${course}`, 14, 46)
+    doc.text(`Date: ${todayDate}`, 14, 53)
 
     const tableHead = [["Student ID", "Name", "Status"]]
 
@@ -141,18 +168,23 @@ export default function AttendanceSheetPage() {
     ])
 
     autoTable(doc, {
-      startY: 55,
+      startY: 60,
       head: tableHead,
       body: tableBody,
     })
 
-    doc.save(`Daily_Attendance_${batch}_${semester}_${todayDate}.pdf`)
+    doc.save(`Daily_Attendance_${course}_${batch}_${semester}_${todayDate}.pdf`)
   }
 
   // ================= MONTHLY =================
   const fetchMonthlyAttendance = async () => {
+    if (!semester || !batch || !selectedMonth || !course) {
+      alert("Select Semester, Batch, Course & Month")
+      return
+    }
+
     const res = await axios.get(
-      `http://localhost:5001/attendance/monthly?semester=${semester}&batch=${batch}&month=${selectedMonth}`,
+      `http://localhost:5001/attendance/monthly?semester=${semester}&batch=${batch}&month=${selectedMonth}&course=${course}`,
       {
         headers: {
           Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
@@ -175,7 +207,7 @@ export default function AttendanceSheetPage() {
     }
   }
 
-  // ===== MONTHLY PDF =====
+  // ================= MONTHLY PDF =================
   const downloadMonthlyPDF = () => {
     if (monthlyData.length === 0) return
 
@@ -192,8 +224,9 @@ export default function AttendanceSheetPage() {
     doc.text(`Teacher: ${currentTeacher}`, 14, 25)
     doc.text(`Semester: ${semester}`, 14, 32)
     doc.text(`Batch: ${batch}`, 14, 39)
-    doc.text(`Month: ${selectedMonth}`, 14, 46)
-    doc.text(`Generated Date: ${todayDate}`, 14, 53)
+    doc.text(`Course: ${course}`, 14, 46)
+    doc.text(`Month: ${selectedMonth}`, 14, 53)
+    doc.text(`Generated Date: ${todayDate}`, 14, 60)
 
     const tableHead = [["Student ID", "Name", ...allDates]]
 
@@ -210,14 +243,14 @@ export default function AttendanceSheetPage() {
     })
 
     autoTable(doc, {
-      startY: 60,
+      startY: 65,
       head: tableHead,
       body: tableBody,
       styles: { fontSize: 7 },
     })
 
     doc.save(
-      `Monthly_Attendance_${batch}_${semester}_${selectedMonth}.pdf`
+      `Monthly_Attendance_${course}_${batch}_${semester}_${selectedMonth}.pdf`
     )
   }
 
@@ -228,6 +261,8 @@ export default function AttendanceSheetPage() {
       <h1 className="text-2xl font-bold">Attendance System</h1>
 
       <div className="grid grid-cols-4 gap-4 bg-white p-6 rounded shadow">
+
+        {/* Semester */}
         <select value={semester} onChange={(e)=>setSemester(e.target.value)} className="border p-2">
           <option value="">Semester</option>
           {[...Array(8)].map((_, i) => (
@@ -235,6 +270,7 @@ export default function AttendanceSheetPage() {
           ))}
         </select>
 
+        {/* Batch */}
         <select value={batch} onChange={(e)=>setBatch(e.target.value)} className="border p-2">
           <option value="">Batch</option>
           {[...Array(20)].map((_, i) => (
@@ -242,18 +278,24 @@ export default function AttendanceSheetPage() {
           ))}
         </select>
 
+        {/* Course Dropdown */}
+        <select value={course} onChange={(e)=>setCourse(e.target.value)} className="border p-2">
+          <option value="">Select Course</option>
+          <optgroup label="Major Courses">
+            {majorCourses.map((c, i) => (
+              <option key={i} value={c}>{c}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Non-Major Courses">
+            {nonMajorCourses.map((c, i) => (
+              <option key={i} value={c}>{c}</option>
+            ))}
+          </optgroup>
+        </select>
+
         <button onClick={loadDailySheet} className="bg-blue-600 text-white p-2 rounded">
           Daily
         </button>
-
-        {!isMonthlyView && students.length > 0 && (
-          <button
-            onClick={downloadDailyPDF}
-            className="bg-purple-600 text-white p-2 rounded"
-          >
-            Download Daily PDF
-          </button>
-        )}
 
         <select value={selectedMonth} onChange={(e)=>setSelectedMonth(e.target.value)} className="border p-2">
           <option value="">Month</option>
@@ -267,11 +309,14 @@ export default function AttendanceSheetPage() {
         </button>
 
         {isMonthlyView && (
-          <button
-            onClick={downloadMonthlyPDF}
-            className="bg-red-600 text-white p-2 rounded"
-          >
+          <button onClick={downloadMonthlyPDF} className="bg-red-600 text-white p-2 rounded">
             Download Monthly PDF
+          </button>
+        )}
+
+        {!isMonthlyView && students.length > 0 && (
+          <button onClick={downloadDailyPDF} className="bg-purple-600 text-white p-2 rounded">
+            Download Daily PDF
           </button>
         )}
       </div>
