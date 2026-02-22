@@ -29,6 +29,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Context Fetch Error:", err);
       }
     }
+    else if (status === "unauthenticated") {
+      setUser(null);
+    }
   };
 
   useEffect(() => {

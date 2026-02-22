@@ -9,8 +9,7 @@ import {
   X, 
   GraduationCap, 
   LayoutDashboard, 
-  LogOut, 
-  Settings 
+  LogOut 
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useUser } from "@/context/UserContext"
@@ -26,21 +25,41 @@ const navLinks = [
 ]
 
 export function Navbar() {
-  const [isOpen, setIsOpen] = useState(false) // Mobile menu state
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false) // Desktop hover state
+  const [isOpen, setIsOpen] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const { user } = useUser()
   const router = useRouter()
 
+
+  console.log(user)
   const isLoggedIn = !!user
 
-  // হোভার শুরু হলে ড্রপডাউন ওপেন হবে
+  const getDashboardRoute = () => {
+    if (user?.role === "admin") return "/admin"
+    if (user?.role === "teacher") return "/teacher"
+    return "/dashboard"
+  }
+
+
+  const getDashboardLabel = () => {
+    if (user?.role === "admin") return "Admin Panel"
+    if (user?.role === "teacher") return "Teacher Portal"
+    return "Student Dashboard"
+  }
+
   const handleMouseEnter = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     setIsDropdownOpen(true)
   }
 
- const handleLogOut = async () => {
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setIsDropdownOpen(false)
+    }, 200)
+  }
+
+  const handleLogOut = async () => {
     await signOut({
       redirect: false,
       callbackUrl: "/login"
@@ -48,14 +67,6 @@ export function Navbar() {
     router.push("/login");
     router.refresh();
   };
-
-
-  // হোভার শেষ হলে ২০০ মিলিসেকেন্ড ডিলে করবে যেন ইউজার মাউস মেনুতে নিতে পারে
-  const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setIsDropdownOpen(false)
-    }, 200)
-  }
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U"
@@ -99,7 +110,6 @@ export function Navbar() {
               </Button>
             </>
           ) : (
-            /* Hoverable Wrapper */
             <div 
               className="relative" 
               onMouseEnter={handleMouseEnter}
@@ -120,7 +130,6 @@ export function Navbar() {
                 </Avatar>
               </Button>
 
-              {/* স্মুথ অ্যানিমেটেড ড্রপডাউন মেনু */}
               <AnimatePresence>
                 {isDropdownOpen && (
                   <motion.div
@@ -131,27 +140,23 @@ export function Navbar() {
                     className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl border border-border bg-popover p-2 shadow-xl"
                   >
                     <div className="px-3 py-3">
-                      <p className="text-sm font-bold text-foreground truncate">{user?.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                      <p className="text-sm font-black italic uppercase tracking-tighter text-foreground truncate leading-none mb-1">
+                        {user?.name}
+                      </p>
+                      <p className="text-[10px] font-bold text-muted-foreground truncate italic tracking-tight">
+                        {user?.email}
+                      </p>
                     </div>
                     <div className="h-px bg-border my-1" />
                     
                     <div className="space-y-1">
                       <Link 
-                        href="/dashboard" 
+                        href={getDashboardRoute()} 
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-black italic uppercase tracking-tight transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
                         <LayoutDashboard className="h-4 w-4 text-primary" /> 
-                        Dashboard
-                      </Link>
-                      <Link 
-                        href="/dashboard/settings" 
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <Settings className="h-4 w-4 text-primary" /> 
-                        Settings
+                        {getDashboardLabel()}
                       </Link>
                     </div>
 
@@ -159,7 +164,7 @@ export function Navbar() {
                     
                     <button 
                       onClick={handleLogOut}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold text-destructive transition-colors hover:bg-destructive/10"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-black italic uppercase tracking-tight text-destructive transition-colors hover:bg-destructive/10"
                     >
                       <LogOut className="h-4 w-4" /> 
                       Sign Out
@@ -204,29 +209,32 @@ export function Navbar() {
               <div className="mt-2 border-t pt-4">
                 {isLoggedIn ? (
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 rounded-xl">
-                      <Avatar className="h-10 w-10 border">
+                    <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-xl">
+                      <Avatar className="h-10 w-10 border border-primary/20">
                         <AvatarImage src={user?.profileImage} />
-                        <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                        <AvatarFallback className="bg-primary text-white font-bold">{getInitials(user?.name)}</AvatarFallback>
                       </Avatar>
                       <div className="overflow-hidden">
-                        <p className="text-sm font-bold truncate">{user?.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                        <p className="text-sm font-black italic uppercase tracking-tighter truncate leading-none">{user?.name}</p>
+                        <p className="text-[10px] font-bold text-muted-foreground truncate italic">{user?.email}</p>
                       </div>
                     </div>
-                    <Button variant="ghost" asChild className="justify-start gap-2" onClick={() => setIsOpen(false)}>
-                      <Link href="/dashboard"><LayoutDashboard className="h-4 w-4" /> Dashboard</Link>
+                    <Button variant="ghost" asChild className="justify-start gap-2 h-12 font-black italic uppercase tracking-tight" onClick={() => setIsOpen(false)}>
+                      <Link href={getDashboardRoute()}>
+                        <LayoutDashboard className="h-4 w-4 text-primary" /> 
+                        {getDashboardLabel()}
+                      </Link>
                     </Button>
-                    <Button variant="destructive" onClick={() => signOut({ callbackUrl: "/" })} className="gap-2">
+                    <Button variant="destructive" onClick={handleLogOut} className="gap-2 h-12 font-black italic uppercase tracking-tight shadow-lg">
                       <LogOut className="h-4 w-4" /> Sign Out
                     </Button>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <Button variant="ghost" asChild className="w-full" onClick={() => setIsOpen(false)}>
+                    <Button variant="ghost" asChild className="w-full h-11 font-bold" onClick={() => setIsOpen(false)}>
                       <Link href="/login">Sign In</Link>
                     </Button>
-                    <Button asChild className="w-full" onClick={() => setIsOpen(false)}>
+                    <Button asChild className="w-full h-11 font-bold shadow-md" onClick={() => setIsOpen(false)}>
                       <Link href="/register">Get Started</Link>
                     </Button>
                   </div>
