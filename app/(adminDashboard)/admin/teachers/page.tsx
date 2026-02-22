@@ -119,11 +119,12 @@ export default function FacultyManagement() {
   // Filter Logic
   const filteredTeachers = useMemo(() => {
     return teachers.filter((t) => {
+    
       const matchesSearch =
         t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.teacherId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDesignation =
-        designationFilter === "all" || t.designation === designationFilter ||  t.role === "teacher" ;
+        designationFilter === "all" || t.designation === designationFilter ||  t.role === "teacher";
       return matchesSearch && matchesDesignation;
     });
   }, [teachers, searchQuery, designationFilter]);
@@ -139,6 +140,7 @@ export default function FacultyManagement() {
       experience: "",
       teacherId: "",
       imageUrl: "",
+      role: "teacher",
     });
     setIsFormOpen(true);
   };
