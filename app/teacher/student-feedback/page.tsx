@@ -138,7 +138,7 @@ export default function StudentFeedback() {
         <Table>
           <TableHeader className="bg-slate-900">
             <TableRow>
-              <TableHead className="text-white uppercase">Course ID</TableHead>
+              <TableHead className="text-white uppercase">Course Name</TableHead>
               <TableHead className="text-white uppercase">Rating</TableHead>
               <TableHead className="text-white uppercase">Comment</TableHead>
               <TableHead className="text-white uppercase text-right">
@@ -163,9 +163,7 @@ export default function StudentFeedback() {
               <TableRow key={fb._id} className="hover:bg-muted/40">
                 <TableCell className="font-bold text-primary">
                   {fb.courseId}
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(fb.createdAt).toDateString()}
-                  </p>
+
                 </TableCell>
 
                 <TableCell>
