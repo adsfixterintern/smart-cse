@@ -25,6 +25,8 @@ import {
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useUser } from "@/context/UserContext"
+import logo from "@/public/cse.avif"
+import Image from "next/image"
 
 const mainNavItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -55,8 +57,8 @@ export function DashboardSidebar() {
       {/* LOGO */}
       <div className="p-8 border-b border-slate-800 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3" onClick={() => setIsOpen(false)}>
-          <div className="bg-blue-600 p-2 rounded-xl">
-            <GraduationCap className="h-6 w-6 text-white" />
+          <div className="bg-white p-1 ">
+            <Image src={logo} alt="SmartCSE Logo" width={34} height={34} className="object-contain" />
           </div>
           <span className="text-2xl font-black text-white tracking-tighter">
             Smart<span className="text-blue-500">Student</span>
