@@ -28,7 +28,7 @@ export default function StudentFeedbackPage() {
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState("")
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://smart-cse-server.vercel.app"
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001"
 
   useEffect(() => {
     const fetchData = async () => {
