@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { GraduationCap, Mail, Phone, MapPin } from "lucide-react"
+import logo from "@/public/cse.avif"
+import Image from "next/image"
 
 const footerLinks = {
   platform: {
@@ -38,8 +40,8 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Link href="/" className="mb-4 flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                <GraduationCap className="h-5 w-5 text-primary-foreground" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg">
+                <Image src={logo} alt="SmartCSE Logo" width={34} height={34} className="object-contain" />
               </div>
               <span className="text-xl font-bold text-foreground">SmartCSE</span>
             </Link>
