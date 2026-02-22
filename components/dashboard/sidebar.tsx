@@ -33,7 +33,6 @@ const mainNavItems = [
   { href: "/dashboard/courses", label: "My Courses", icon: BookOpen },
   { href: "/dashboard/attendance", label: "Attendance", icon: ClipboardCheck },
   { href: "/dashboard/grades", label: "Exam Results", icon: BarChart3 },
-  { href: "/dashboard/resources", label: "Resources", icon: FolderOpen },
   { href: "/dashboard/feedback", label: "Student Feedback", icon: MessageSquareText },
 ]
 
