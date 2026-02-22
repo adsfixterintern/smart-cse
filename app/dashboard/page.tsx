@@ -62,28 +62,37 @@ export default function StudentDashboard() {
       </motion.div>
 
       {/* --- STATS CARDS --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: "ATTENDANCE", val: `${data?.stats?.attendanceRate}%`, icon: ClipboardCheck, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "TOTAL CGPA", val: data?.stats?.cgpa, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10" },
-          { label: "COURSES", val: data?.stats?.enrolledCourses, icon: BookOpen, color: "text-purple-500", bg: "bg-purple-500/10" },
-          { label: "TASKS", val: data?.stats?.pendingTasks, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10" },
-        ].map((s, i) => (
-          <motion.div key={i} whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
-            <Card className="border-none shadow-sm rounded-3xl group transition-all hover:bg-slate-50">
-              <CardContent className="p-6 flex items-center gap-5">
-                <div className={`p-4 rounded-2xl ${s.bg} ${s.color} transition-transform group-hover:rotate-12`}>
-                  <s.icon size={28} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase italic tracking-[0.2em]">{s.label}</p>
-                  <p className="text-2xl font-black italic tracking-tighter">{s.val}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  {[
+    { label: "ATTENDANCE", val: `${data?.stats?.attendanceRate}%`, icon: ClipboardCheck, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "TOTAL CGPA", val: data?.stats?.cgpa, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "COURSES", val: data?.stats?.enrolledCourses, icon: BookOpen, color: "text-purple-500", bg: "bg-purple-500/10" },
+    { label: "TASKS", val: data?.stats?.pendingTasks, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10" },
+  ].map((s, i) => (
+    <motion.div key={i} whileHover={{ y: -3 }} transition={{ duration: 0.2 }}>
+      <Card className="border-none shadow-sm rounded-2xl group transition-all hover:bg-slate-50 border border-transparent hover:border-slate-200">
+        <CardContent className="p-3 sm:p-4 flex items-center gap-3">
+          {/* Icon Container - Laptop এ সাইজ কমানো হয়েছে */}
+          <div className={`p-2.5 sm:p-3 rounded-xl ${s.bg} ${s.color} transition-transform group-hover:scale-110 shrink-0`}>
+            {/* আইকন সাইজ ল্যাপটপ এবং বড় স্ক্রিনে ২০ পিক্সেল রাখা হয়েছে */}
+            <s.icon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-[20px] lg:w-[20px]" />
+          </div>
+          
+          <div className="min-w-0">
+            {/* Label - ফন্ট সাইজ এবং স্পেসিং কমানো হয়েছে */}
+            <p className="text-[7px] sm:text-[9px] font-black text-slate-400 uppercase italic tracking-[0.1em] truncate leading-none mb-1">
+              {s.label}
+            </p>
+            {/* Value - টেক্সট সাইজ ল্যাপটপে ছোট করা হয়েছে (text-lg/text-xl) */}
+            <p className="text-sm sm:text-lg lg:text-xl font-black italic tracking-tighter truncate text-slate-800">
+              {s.val}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  ))}
+</div>
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* --- SCHEDULE SECTION --- */}
