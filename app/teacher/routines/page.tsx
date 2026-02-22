@@ -210,15 +210,7 @@ export default function RoutineManagement() {
             Management Dashboard
           </p>
         </div>
-        <Button
-          onClick={() => {
-            resetForm();
-            setIsFormOpen(true);
-          }}
-          className="bg-primary h-14 px-8 rounded-2xl font-black text-lg shadow-xl shadow-primary/30"
-        >
-          <Plus className="mr-2 h-6 w-6 stroke-[3px]" /> ADD NEW
-        </Button>
+
       </div>
 
       {/* Routine Grid */}
