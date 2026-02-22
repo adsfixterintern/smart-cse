@@ -158,34 +158,7 @@ export default function RoutineManagement() {
   };
 
   // --- DELETE ROUTINE ---
-  const handleDelete = async (routine: Routine) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#EF4444",
-      confirmButtonText: "Yes, delete it!",
-    });
 
-    if (result.isConfirmed) {
-      try {
-        const res = await fetch(`${API_URL}/routines/${routine._id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
-          },
-        });
-
-        if (res.ok) {
-          setRoutines((prev) => prev.filter((r) => r._id !== routine._id));
-          Swal.fire("Deleted!", "Routine has been deleted.", "success");
-        }
-      } catch (error) {
-        Swal.fire("Error", "Could not delete", "error");
-      }
-    }
-  };
 
   const resetForm = () => {
     setEditingRoutine(null);
@@ -242,29 +215,8 @@ export default function RoutineManagement() {
                 >
                   <Eye className="h-5 w-5" />
                 </Button>
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="rounded-full text-blue-600"
-                  onClick={() => {
-                    setEditingRoutine(routine);
-                    setTitle(routine.title);
-                    setSemester(routine.semester);
-                    setImageUrl(routine.imageUrl);
-                    setPublicId(routine.public_id || "");
-                    setIsFormOpen(true);
-                  }}
-                >
-                  <Pencil className="h-5 w-5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="rounded-full text-red-600"
-                  onClick={() => handleDelete(routine)}
-                >
-                  <Trash2 className="h-5 w-5" />
-                </Button>
+
+
               </div>
             </div>
             <div className="p-6 bg-white">

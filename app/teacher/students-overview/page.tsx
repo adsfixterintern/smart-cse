@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -10,38 +12,34 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 
-interface StudentOverview {
-  _id: string;
+/* ================= TYPES ================= */
+interface Student {
   name: string;
-  email: string;
   studentId: string;
   batch: string;
-  semester: string;
-  avgResult: number;
-  avgAttendance: number;
+  cgpa: number;
+  attendancePercent: number;
 }
 
+/* ================= COMPONENT ================= */
 export default function StudentOverviewPage() {
   const { data: session } = useSession();
-  const [students, setStudents] = useState<StudentOverview[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [batch, setBatch] = useState("");
-  const [semester, setSemester] = useState("");
-
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-  // ---------------- FETCH DATA ----------------
+  const [students, setStudents] = useState<Student[]>([]);
+  const [batch, setBatch] = useState("");
+  const [semester, setSemester] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  /* ================= FETCH ================= */
   const fetchStudents = async () => {
     try {
+      setLoading(true);
       const token = (session?.user as any)?.accessToken;
       if (!token) return;
-
-      setLoading(true);
 
       const params = new URLSearchParams();
       if (batch) params.append("batch", batch);
@@ -58,8 +56,8 @@ export default function StudentOverviewPage() {
 
       const data = await res.json();
       setStudents(data);
-    } catch (error) {
-      console.error("Failed to load student overview", error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -67,106 +65,158 @@ export default function StudentOverviewPage() {
 
   useEffect(() => {
     fetchStudents();
-  }, [session, batch, semester]);
+  }, [batch, semester, session]);
 
+  /* ================= UI ================= */
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
-      {/* ---------------- HEADER ---------------- */}
+      {/* HEADER */}
       <div>
         <h1 className="text-4xl font-black italic tracking-tighter uppercase underline decoration-primary decoration-4 underline-offset-8">
           Student Overview
         </h1>
-        <p className="text-slate-500 font-bold italic text-xs uppercase tracking-widest mt-4">
-          Result & Attendance Summary
+        <p className="text-sm text-slate-500 font-semibold">
+          CGPA & Attendance Summary
         </p>
       </div>
 
-      {/* ---------------- FILTERS ---------------- */}
-      <div className="flex flex-wrap gap-4">
-        <Select value={batch} onValueChange={setBatch}>
-          <SelectTrigger className="w-40 font-bold">
-            <SelectValue placeholder="Select Batch" />
-          </SelectTrigger>
-          <SelectContent>
-            {["1", "2", "3", "4", "5"].map((b) => (
-              <SelectItem key={b} value={b}>
-                Batch {b}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* FILTERS */}
+      <Card className="p-6 rounded-[2.5rem] shadow-xl flex flex-col md:flex-row gap-4">
+        <Input
+          placeholder="Filter by Batch"
+          value={batch}
+          onChange={(e) => setBatch(e.target.value)}
+          className="font-semibold"
+        />
 
         <Select value={semester} onValueChange={setSemester}>
-          <SelectTrigger className="w-40 font-bold">
+          <SelectTrigger className="font-semibold">
             <SelectValue placeholder="Select Semester" />
           </SelectTrigger>
           <SelectContent>
-            {["1","2","3","4","5","6","7","8"].map((s) => (
-              <SelectItem key={s} value={s}>
+            {[1,2,3,4,5,6,7,8].map((s) => (
+              <SelectItem key={s} value={String(s)}>
                 Semester {s}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </Card>
+
+      {/* ================= DESKTOP TABLE ================= */}
+      <div className="hidden md:block">
+        <Card className="border-none shadow-2xl bg-white rounded-[2.5rem] overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="animate-spin w-8 h-8 text-primary" />
+            </div>
+          ) : (
+            <Table className="[&_tr:hover]:bg-transparent">
+              <TableHeader className="bg-slate-900">
+                <TableRow>
+                  <TableHead className="text-white font-bold py-6 px-8 uppercase italic">
+                    Student
+                  </TableHead>
+                  <TableHead className="text-white font-bold py-6 uppercase italic">
+                    Batch
+                  </TableHead>
+                  <TableHead className="text-white font-bold py-6 uppercase italic text-center">
+                    CGPA
+                  </TableHead>
+                  <TableHead className="text-white font-bold py-6 uppercase italic text-center px-8">
+                    Attendance %
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {students.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center py-10 text-slate-500"
+                    >
+                      No students found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  students.map((s) => (
+                    <TableRow
+                      key={s.studentId}
+                      className="transition hover:bg-slate-50"
+                    >
+                      <TableCell className="px-8 py-6">
+                        <p className="font-bold text-slate-800">
+                          {s.name}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {s.studentId}
+                        </p>
+                      </TableCell>
+
+                      <TableCell className="font-semibold">
+                        {s.batch}
+                      </TableCell>
+
+                      <TableCell className="text-center font-black">
+                        <span
+                          className={
+                            s.cgpa >= 3.5
+                              ? "text-green-600"
+                              : s.cgpa >= 3
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                          }
+                        >
+                          {s.cgpa}
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="text-center font-black px-8">
+                        <span
+                          className={
+                            s.attendancePercent >= 75
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }
+                        >
+                          {s.attendancePercent}%
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </Card>
       </div>
 
-      {/* ---------------- TABLE ---------------- */}
-      <Card className="rounded-3xl shadow-2xl overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <Loader2 className="animate-spin h-8 w-8 text-primary" />
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-900">
-                <TableHead className="text-center text-white">#</TableHead>
-                <TableHead className="text-center text-white">Name</TableHead>
-                <TableHead className="text-center text-white">Student ID</TableHead>
-                <TableHead className="text-center text-white">Batch</TableHead>
-                <TableHead className="text-center text-white">Semester</TableHead>
-                <TableHead className="text-center text-white">
-                  Avg Result
-                </TableHead>
-                <TableHead className="text-center text-white">
-                  Avg Attendance
-                </TableHead>
-              </TableRow>
-            </TableHeader>
+      {/* ================= MOBILE VIEW ================= */}
+      <div className="md:hidden space-y-4">
+        {students.map((s) => (
+          <Card
+            key={s.studentId}
+            className="p-6 rounded-3xl shadow-lg space-y-2"
+          >
+            <p className="font-black uppercase">{s.name}</p>
+            <p className="text-xs text-slate-500">{s.studentId}</p>
 
-            <TableBody>
-              {students.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-10 text-muted-foreground"
-                  >
-                    No students found
-                  </TableCell>
-                </TableRow>
-              )}
-
-              {students.map((s, i) => (
-                <TableRow key={s._id} className="hover:bg-muted/40">
-                  <TableCell className="text-center">{i + 1}</TableCell>
-                  <TableCell className="text-center font-bold">
-                    {s.name}
-                  </TableCell>
-                  <TableCell className="text-center">{s.studentId}</TableCell>
-                  <TableCell className="text-center">{s.batch}</TableCell>
-                  <TableCell className="text-center">{s.semester}</TableCell>
-                  <TableCell className="text-center font-bold text-green-600">
-                    {s.avgResult}
-                  </TableCell>
-                  <TableCell className="text-center font-bold text-blue-600">
-                    {s.avgAttendance}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
+            <div className="flex justify-between pt-4">
+              <span className="font-bold text-sm">
+                CGPA:{" "}
+                <span className="font-black">{s.cgpa}</span>
+              </span>
+              <span className="font-bold text-sm">
+                Attendance:{" "}
+                <span className="font-black">
+                  {s.attendancePercent}%
+                </span>
+              </span>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
