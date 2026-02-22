@@ -28,8 +28,7 @@ const teacherNavItems = [
   { href: "/teacher", label: "Overview", icon: LayoutDashboard },
   { href: "/teacher/notices", label: "Notices", icon: Bell },
   { href: "/teacher/routines", label: "Class Routine", icon: Calendar },
-  { href: "/teacher/courses", label: "My Courses", icon: BookOpen },
-  { href: "/teacher/students", label: "Students", icon: Users },
+  { href: "/teacher/students-overview", label: "Students", icon: Users },
   { href: "/teacher/attendance", label: "Attendance", icon: ClipboardCheck },
   { href: "/teacher/results", label: "Results", icon: BarChart3 },
   { href: "/teacher/student-feedback", label: "Student Feedback", icon: MessageSquareText },
@@ -111,13 +110,7 @@ export function TeacherSidebar() {
           </div>
         </div>
 
-        <Link
-          href="/teacher/settings"
-          className="flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-white"
-        >
-          <Settings className="h-4 w-4" />
-          Settings
-        </Link>
+
 
         <button
           onClick={handleLogout}
