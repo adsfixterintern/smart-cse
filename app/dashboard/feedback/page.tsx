@@ -1,501 +1,247 @@
 "use client"
 
-import { useState } from "react"
-import Image from "next/image"
+import { useState, useEffect } from "react"
+import axios from "axios"
+import { useSession } from "next-auth/react"
+import { useUser } from "@/context/UserContext"
+import toast from "react-hot-toast"
+import { Rating } from "react-simple-star-rating"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
-import {
-  Star,
-  MessageSquare,
-  Send,
-  ThumbsUp,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  FileText,
-  Users,
-  TrendingUp,
-  Lightbulb,
-} from "lucide-react"
-import { FadeIn } from "@/components/ui/motion"
+import { Star, MessageSquare, Send, Loader2, History, CheckCircle2 } from "lucide-react"
 
-const courses = [
-  { code: "CSE-301", name: "Data Structures", instructor: "Dr. Rahman" },
-  { code: "CSE-303", name: "Algorithm Design", instructor: "Prof. Karim" },
-  { code: "CSE-305", name: "Database Systems", instructor: "Dr. Fatema" },
-  { code: "CSE-307", name: "Software Engineering", instructor: "Prof. Mamun" },
-  { code: "CSE-309", name: "Computer Networks", instructor: "Dr. Hasan" },
-  { code: "CSE-311", name: "Operating Systems", instructor: "Prof. Akter" },
-]
-
-const previousFeedback = [
-  {
-    id: 1,
-    course: "Data Structures",
-    code: "CSE-301",
-    instructor: "Dr. Rahman",
-    date: "Jan 20, 2026",
-    rating: 5,
-    status: "submitted",
-    comment: "Excellent teaching methodology. The practical examples really helped understand complex concepts.",
-  },
-  {
-    id: 2,
-    course: "Algorithm Design",
-    code: "CSE-303",
-    instructor: "Prof. Karim",
-    date: "Jan 18, 2026",
-    rating: 4,
-    status: "reviewed",
-    comment: "Good course content but would appreciate more coding exercises during class.",
-  },
-  {
-    id: 3,
-    course: "Software Engineering",
-    code: "CSE-307",
-    instructor: "Prof. Mamun",
-    date: "Dec 15, 2025",
-    rating: 5,
-    status: "acknowledged",
-    comment: "The project-based learning approach is very effective. Learned a lot about real-world development.",
-  },
-]
-
-const feedbackCategories = [
-  { label: "Teaching Quality", icon: Users },
-  { label: "Course Content", icon: FileText },
-  { label: "Learning Experience", icon: Lightbulb },
-  { label: "Assessment Methods", icon: CheckCircle2 },
-]
-
-const suggestions = [
-  {
-    id: 1,
-    title: "More Lab Sessions for Database",
-    description: "Request for additional lab hours for practical database exercises",
-    category: "Course Content",
-    votes: 45,
-    status: "under-review",
-    date: "Jan 22, 2026",
-  },
-  {
-    id: 2,
-    title: "Guest Lectures from Industry",
-    description: "Suggestion to invite industry professionals for guest lectures",
-    category: "Learning Experience",
-    votes: 78,
-    status: "approved",
-    date: "Jan 15, 2026",
-  },
-  {
-    id: 3,
-    title: "Online Office Hours",
-    description: "Request for teachers to have online office hours for quick queries",
-    category: "Teaching Quality",
-    votes: 62,
-    status: "implementing",
-    date: "Jan 10, 2026",
-  },
-]
-
-export default function FeedbackPage() {
-  const [selectedCourse, setSelectedCourse] = useState("")
+export default function StudentFeedbackPage() {
+  const { data: session } = useSession()
+  const { user } = useUser() 
+  
+  const [courses, setCourses] = useState<any[]>([])
+  const [history, setHistory] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  
+  const [selectedCourse, setSelectedCourse] = useState({ name: "", code: "" })
   const [rating, setRating] = useState(0)
-  const [hoverRating, setHoverRating] = useState(0)
-  const [feedbackText, setFeedbackText] = useState("")
-  const [suggestionTitle, setSuggestionTitle] = useState("")
-  const [suggestionDescription, setSuggestionDescription] = useState("")
+  const [comment, setComment] = useState("")
 
-  const pendingFeedback = courses.filter(
-    (c) => !previousFeedback.some((pf) => pf.code === c.code)
-  )
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001"
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!session?.user || !user?.semester) return;
+      try {
+        const token = (session as any)?.user?.accessToken;
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [courseRes, historyRes] = await Promise.all([
+          fetch(`${apiUrl}/courses/${user.semester}`, { headers }),
+          fetch(`${apiUrl}/feedback`, { headers })
+        ]);
+
+        const courseData = await courseRes.json();
+        const historyData = await historyRes.json();
+
+        setCourses(Array.isArray(courseData) ? courseData : []);
+        setHistory(Array.isArray(historyData) ? historyData.filter((f: any) => f.studentEmail === session.user?.email) : []);
+      } catch (error) {
+        toast.error("Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [session, user, apiUrl]);
+
+  const handleSubmit = async () => {
+    if (user?.role !== "student") {
+      toast.error("Only students can submit feedback.");
+      return;
+    }
+
+    if (!selectedCourse.name || rating === 0 || !comment) {
+      toast.error("Please fill all fields!");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = (session as any)?.user?.accessToken;
+      await axios.post(`${apiUrl}/feedback`, {
+        courseName: selectedCourse.name, 
+        courseId: selectedCourse.code, // ব্যাকএন্ডে courseId হিসেবে পাঠাচ্ছি
+        rating: rating,
+        comment: comment,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success("Feedback submitted successfully!");
+      setRating(0);
+      setComment("");
+      setSelectedCourse({ name: "", code: "" });
+      
+      const historyRes = await fetch(`${apiUrl}/feedback`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const historyData = await historyRes.json();
+      setHistory(historyData.filter((f: any) => f.studentEmail === session?.user?.email));
+      
+    } catch (error) {
+      toast.error("Submission failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-blue-600" /></div>;
 
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <section>
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground md:text-3xl">Feedback</h1>
-            <p className="text-muted-foreground">Share your thoughts to improve the learning experience</p>
-          </div>
-          <Badge variant="outline" className="w-fit">
-            <Clock className="mr-1 h-3 w-3" />
-            {pendingFeedback.length} courses pending feedback
-          </Badge>
+    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="flex justify-between items-end border-b pb-6">
+        <div>
+          <h1 className="text-3xl font-black italic uppercase tracking-tighter">Course <span className="text-blue-600">Feedback</span></h1>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">ID: {session?.user?.email?.split('@')[0]}</p>
         </div>
-      </section>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {[
-          { label: "Feedback Given", value: previousFeedback.length.toString(), icon: MessageSquare, color: "text-primary" },
-          { label: "Avg. Rating Given", value: "4.7", icon: Star, color: "text-amber-500" },
-          { label: "Suggestions Made", value: "3", icon: Lightbulb, color: "text-accent" },
-          { label: "Response Rate", value: "85%", icon: TrendingUp, color: "text-chart-3" },
-        ].map((stat, index) => (
-          <Card key={index} className="border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-muted`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <Badge className="bg-blue-600 px-4 py-1.5 rounded-full font-black italic uppercase text-xs">{user?.semester} Semester</Badge>
       </div>
 
-      {/* Main Content */}
-      <Tabs defaultValue="give" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="give">Give Feedback</TabsTrigger>
-          <TabsTrigger value="history">My Feedback</TabsTrigger>
-          <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
+      <Tabs defaultValue="add" className="w-full">
+        <TabsList className="bg-slate-100 p-1 rounded-2xl mb-8 w-fit">
+          <TabsTrigger value="add" className="rounded-xl font-black italic uppercase px-8 text-xs">Post Feedback</TabsTrigger>
+          <TabsTrigger value="history" className="rounded-xl font-black italic uppercase px-8 text-xs">History</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="give" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Feedback Form */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-primary" />
-                  Course Feedback
-                </CardTitle>
-                <CardDescription>Rate and review your courses to help improve teaching quality</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Select Course</Label>
-                  <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.code} value={course.code}>
-                          {course.name} ({course.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedCourse && (
-                  <>
-                    <div className="rounded-lg bg-muted/50 p-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {courses.find((c) => c.code === selectedCourse)?.instructor.split(" ").map((n) => n[0]).join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-foreground">
-                            {courses.find((c) => c.code === selectedCourse)?.instructor}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {courses.find((c) => c.code === selectedCourse)?.name}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Overall Rating</Label>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            onClick={() => setRating(star)}
-                            onMouseEnter={() => setHoverRating(star)}
-                            onMouseLeave={() => setHoverRating(0)}
-                            className="p-1 transition-transform hover:scale-110"
-                          >
-                            <Star
-                              className={`h-8 w-8 ${
-                                star <= (hoverRating || rating)
-                                  ? "fill-amber-400 text-amber-400"
-                                  : "text-muted-foreground/30"
-                              }`}
-                            />
-                          </button>
-                        ))}
-                        {rating > 0 && (
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            {rating === 5 ? "Excellent" : rating === 4 ? "Good" : rating === 3 ? "Average" : rating === 2 ? "Below Average" : "Poor"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Feedback Categories</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {feedbackCategories.map((category) => (
-                          <Button
-                            key={category.label}
-                            variant="outline"
-                            className="h-auto justify-start gap-2 p-3 bg-transparent"
-                          >
-                            <category.icon className="h-4 w-4 text-primary" />
-                            <span className="text-sm">{category.label}</span>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Your Comments</Label>
-                      <Textarea
-                        placeholder="Share your thoughts about the course, teaching methodology, or any suggestions for improvement..."
-                        value={feedbackText}
-                        onChange={(e) => setFeedbackText(e.target.value)}
-                        rows={4}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Your feedback is anonymous and will be used to improve teaching quality.
-                      </p>
-                    </div>
-
-                    <Button className="w-full" disabled={!rating || !feedbackText}>
-                      <Send className="mr-2 h-4 w-4" />
-                      Submit Feedback
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Pending Feedback */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-chart-5" />
-                  Pending Feedback
-                </CardTitle>
-                <CardDescription>Courses waiting for your feedback</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {pendingFeedback.map((course) => (
-                    <div
-                      key={course.code}
-                      className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 p-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-5/10">
-                          <AlertCircle className="h-5 w-5 text-chart-5" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-foreground">{course.name}</div>
-                          <div className="text-sm text-muted-foreground">{course.instructor}</div>
-                        </div>
-                      </div>
-                      <Button size="sm" onClick={() => setSelectedCourse(course.code)}>
-                        Give Feedback
-                      </Button>
-                    </div>
-                  ))}
-                  {pendingFeedback.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <CheckCircle2 className="h-12 w-12 text-accent" />
-                      <p className="mt-4 text-muted-foreground">All caught up! No pending feedback.</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-6">
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                My Feedback History
-              </CardTitle>
-              <CardDescription>View all the feedback you have submitted</CardDescription>
+        <TabsContent value="add" className="grid lg:grid-cols-5 gap-8">
+          <Card className="lg:col-span-3 border-none shadow-2xl rounded-[2.5rem] bg-white">
+            <CardHeader className="p-8 pb-4 text-center md:text-left">
+              <CardTitle className="italic font-black uppercase text-xl">Share Experience</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {previousFeedback.map((feedback) => (
-                  <div
-                    key={feedback.id}
-                    className="rounded-lg border border-border/50 bg-muted/30 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-foreground">{feedback.course}</span>
-                          <Badge variant="outline">{feedback.code}</Badge>
-                          <Badge
-                            variant={
-                              feedback.status === "acknowledged" ? "default" :
-                              feedback.status === "reviewed" ? "secondary" : "outline"
-                            }
-                          >
-                            {feedback.status.charAt(0).toUpperCase() + feedback.status.slice(1)}
-                          </Badge>
-                        </div>
-                        <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>{feedback.instructor}</span>
-                          <span>•</span>
-                          <span>{feedback.date}</span>
-                        </div>
-                        <div className="mt-3 flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`h-4 w-4 ${
-                                star <= feedback.rating
-                                  ? "fill-amber-400 text-amber-400"
-                                  : "text-muted-foreground/30"
-                              }`}
-                            />
-                          ))}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            {feedback.rating}/5
-                          </span>
-                        </div>
-                        <p className="mt-3 text-sm text-muted-foreground">{feedback.comment}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            <CardContent className="p-8 pt-4 space-y-8">
+              <div className="space-y-3">
+                <Label className="font-black italic uppercase text-[10px] text-slate-400 ml-1">Subject</Label>
+                <Select 
+                  value={selectedCourse.name} 
+                  onValueChange={(val) => {
+                    const selected = courses.find(c => c.name === val);
+                    setSelectedCourse({ 
+                      name: selected?.name || "", 
+                      code: selected?.courseCode || selected?.code || "" 
+                    });
+                  }}
+                >
+                  <SelectTrigger className="rounded-2xl border-2 h-14 font-bold italic">
+                    <SelectValue placeholder="Select a course" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {courses.map(c => (
+                      <SelectItem key={c._id} value={c.name} className="font-bold italic uppercase py-3">
+                        {c.name} ({c.courseCode || c.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
+              <div className="space-y-3">
+                <Label className="font-black italic uppercase text-[10px] text-slate-400 block ml-1">Rating</Label>
+                <div className="flex flex-row items-center gap-6 bg-slate-50 p-6 rounded-[2rem] border-2">
+                  <div style={{ display: 'inline-block', direction: 'ltr' }}>
+                    <Rating
+                      onClick={(rate) => setRating(rate)}
+                      initialValue={rating}
+                      size={38}
+                      transition
+                      fillColor="#f1c40f"
+                      emptyColor="#e2e8f0"
+                      SVGstyle={{ display: 'inline' }}
+                    />
+                  </div>
+                  <div className="flex flex-col items-center justify-center bg-white h-14 w-14 rounded-2xl shadow-sm border-2">
+                    <span className="text-2xl font-black italic text-blue-600 leading-none">{rating}</span>
+                    <span className="text-[8px] font-bold text-slate-400 mt-1">/ 5</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="font-black italic uppercase text-[10px] text-slate-400 ml-1">Comment</Label>
+                <Textarea 
+                  placeholder="Tell us about the instructor and the course material..."
+                  className="rounded-[1.5rem] border-2 min-h-[150px] font-medium italic p-5"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+              </div>
+
+              <Button onClick={handleSubmit} disabled={submitting} className="w-full h-16 rounded-[1.5rem] bg-slate-900 text-white font-black italic uppercase tracking-widest shadow-xl transition-all hover:bg-blue-600">
+                {submitting ? <Loader2 className="animate-spin" /> : "Submit Feedback"}
+              </Button>
             </CardContent>
           </Card>
+
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="font-black italic uppercase text-slate-400 text-[11px] tracking-widest px-2">Waiting for Review</h3>
+            {courses.filter(c => !history.some(h => h.courseName === c.name)).map((course) => (
+              <div 
+                key={course._id} 
+                onClick={() => setSelectedCourse({ name: course.name, code: course.courseCode || course.code })} 
+                className={`bg-white p-5 rounded-[1.5rem] border flex justify-between items-center group cursor-pointer transition-all ${selectedCourse.name === course.name ? 'border-blue-600 bg-blue-50' : 'hover:border-blue-500'}`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black italic text-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
+                    {(course.courseCode || course.code)?.substring(0,2) || "C"}
+                  </div>
+                  <div>
+                    <p className="font-black italic uppercase text-sm text-slate-800">{course.name}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{course.courseCode || course.code}</p>
+                  </div>
+                </div>
+                <CheckCircle2 className={`${selectedCourse.name === course.name ? 'text-blue-600' : 'text-slate-100'} group-hover:text-blue-500 w-5 h-5`} />
+              </div>
+            ))}
+          </div>
         </TabsContent>
 
-        <TabsContent value="suggestions" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Submit Suggestion */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5 text-accent" />
-                  Submit Suggestion
-                </CardTitle>
-                <CardDescription>Share your ideas to improve the department</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Suggestion Title</Label>
-                  <Input
-                    placeholder="Brief title for your suggestion"
-                    value={suggestionTitle}
-                    onChange={(e) => setSuggestionTitle(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {feedbackCategories.map((cat) => (
-                        <SelectItem key={cat.label} value={cat.label}>{cat.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    placeholder="Describe your suggestion in detail..."
-                    value={suggestionDescription}
-                    onChange={(e) => setSuggestionDescription(e.target.value)}
-                    rows={4}
-                  />
-                </div>
-                <Button className="w-full" disabled={!suggestionTitle || !suggestionDescription}>
-                  <Send className="mr-2 h-4 w-4" />
-                  Submit Suggestion
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Community Suggestions */}
-            <Card className="border-border/50 lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  Community Suggestions
-                </CardTitle>
-                <CardDescription>Popular suggestions from students</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {suggestions.map((suggestion) => (
-                    <div
-                      key={suggestion.id}
-                      className="rounded-lg border border-border/50 bg-muted/30 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-foreground">{suggestion.title}</h3>
-                            <Badge
-                              variant={
-                                suggestion.status === "approved" ? "default" :
-                                suggestion.status === "implementing" ? "secondary" : "outline"
-                              }
-                            >
-                              {suggestion.status === "under-review" ? "Under Review" :
-                               suggestion.status === "approved" ? "Approved" : "Implementing"}
-                            </Badge>
-                          </div>
-                          <Badge variant="outline" className="mt-2">{suggestion.category}</Badge>
-                          <p className="mt-2 text-sm text-muted-foreground">{suggestion.description}</p>
-                          <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>{suggestion.date}</span>
-                          </div>
+        <TabsContent value="history">
+          <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden">
+            <CardContent className="p-0 overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-900 text-white italic uppercase text-[10px] tracking-widest">
+                  <tr>
+                    <th className="p-8">Course Info</th>
+                    <th className="p-8">Rating</th>
+                    <th className="p-8">Comment</th>
+                    <th className="p-8">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y font-medium italic text-slate-700">
+                  {history.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="p-8">
+                        <p className="font-black uppercase text-xs text-slate-800">{item.courseName}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">{item.courseId}</p>
+                      </td>
+                      <td className="p-8">
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} size={14} className={i < item.rating ? "fill-amber-400 text-amber-400" : "text-slate-200"} />
+                          ))}
                         </div>
-                        <div className="flex flex-col items-center gap-1">
-                          <Button variant="outline" size="icon" className="h-10 w-10 bg-transparent">
-                            <ThumbsUp className="h-4 w-4" />
-                          </Button>
-                          <span className="text-sm font-medium text-foreground">{suggestion.votes}</span>
-                        </div>
-                      </div>
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                          <span>Progress</span>
-                          <span>
-                            {suggestion.status === "under-review" ? "25%" :
-                             suggestion.status === "approved" ? "50%" : "75%"}
-                          </span>
-                        </div>
-                        <Progress
-                          value={
-                            suggestion.status === "under-review" ? 25 :
-                            suggestion.status === "approved" ? 50 : 75
-                          }
-                          className="h-2"
-                        />
-                      </div>
-                    </div>
+                      </td>
+                      <td className="p-8 text-xs max-w-xs truncate">"{item.comment}"</td>
+                      <td className="p-8">
+                        <Badge className="bg-emerald-50 text-emerald-600 border-none font-black italic uppercase text-[9px]">Verified</Badge>
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

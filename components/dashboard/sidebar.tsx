@@ -19,9 +19,9 @@ import {
   BookOpen,
   Loader2,
   User,
-  Menu, // নতুন
-  X,    // নতুন
-  Home  // নতুন
+  Menu, 
+  X,    
+  Home  
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useUser } from "@/context/UserContext"
@@ -34,7 +34,7 @@ const mainNavItems = [
   { href: "/dashboard/attendance", label: "Attendance", icon: ClipboardCheck },
   { href: "/dashboard/grades", label: "Exam Results", icon: BarChart3 },
   { href: "/dashboard/resources", label: "Resources", icon: FolderOpen },
-  { href: "/dashboard/feedback", label: "Teacher Feedback", icon: MessageSquareText },
+  { href: "/dashboard/feedback", label: "Student Feedback", icon: MessageSquareText },
 ]
 
 export function DashboardSidebar() {
