@@ -56,6 +56,7 @@ interface Teacher {
   experience: string;
   imageUrl: string;
   teacherId: string;
+  role?: string; 
 }
 
 export default function FacultyManagement() {
@@ -87,6 +88,7 @@ export default function FacultyManagement() {
     experience: "",
     teacherId: "",
     imageUrl: "",
+    role: "teacher",
   });
 
   // 1. Fetch Faculties from API
@@ -121,7 +123,7 @@ export default function FacultyManagement() {
         t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.teacherId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDesignation =
-        designationFilter === "all" || t.designation === designationFilter;
+        designationFilter === "all" || t.designation === designationFilter ||  t.role === "teacher" ;
       return matchesSearch && matchesDesignation;
     });
   }, [teachers, searchQuery, designationFilter]);
