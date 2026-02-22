@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { useUser } from "@/context/UserContext"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -9,10 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  ClipboardCheck, TrendingUp, TrendingDown, AlertTriangle, 
-  CheckCircle2, XCircle, Clock, Download, Loader2, BarChart3, Calendar 
+  ClipboardCheck, AlertTriangle, 
+  CheckCircle2, XCircle, Loader2, Download, Calendar 
 } from "lucide-react"
-import { motion } from "framer-motion"
 
 export default function DynamicAttendancePage() {
   const { data: session } = useSession()
@@ -21,127 +20,146 @@ export default function DynamicAttendancePage() {
   const [courses, setCourses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-  const fetchData = async () => {
-    if (!session?.user || !user?._id) return;
-    try {
-      const token = (session as any)?.user?.accessToken;
-      
-      const attRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attendance?semester=${user.semester}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const attJson = attRes.ok ? await attRes.json() : []; 
-      
-      const courseRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${user.semester}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const courseJson = courseRes.ok ? await courseRes.json() : [];
+  // API URL defined
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001"
 
-      setAttendanceData(attJson);
-      setCourses(courseJson);
-    } catch (error) {
-      console.error("Error fetching attendance:", error);
-      setAttendanceData([]); 
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchData();
-}, [session, user]);
+  useEffect(() => {
+    const fetchData = async () => {
+      // User ID বা Session না থাকলে ফেচ করবে না
+      if (!session?.user || !user?._id) return;
+      
+      try {
+        const token = (session as any)?.user?.accessToken;
+        const headers = { Authorization: `Bearer ${token}` };
+
+        // ১. এটেনডেন্স এবং ২. কোর্স ডাটা প্যারালালে ফেচ করা (Performance Optimization)
+        const [attRes, courseRes] = await Promise.all([
+          fetch(`${apiUrl}/attendance?semester=${user.semester}`, { headers }),
+          fetch(`${apiUrl}/courses/${user.semester}`, { headers })
+        ]);
+
+        const attJson = attRes.ok ? await attRes.json() : [];
+        const courseJson = courseRes.ok ? await courseRes.json() : [];
+
+        setAttendanceData(attJson);
+        setCourses(courseJson);
+      } catch (error) {
+        console.error("Error fetching attendance:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [session, user, apiUrl]);
+
+  // --- Logic: Calculation using useMemo (Performance) ---
+  const { courseAnalysis, stats } = useMemo(() => {
+    if (!user?._id) return { courseAnalysis: [], stats: { avg: 0, present: 0, absent: 0, risk: 0 } };
+
+    const studentId = user._id.toString();
+    let totalPresentCount = 0;
+    let totalAbsentCount = 0;
+
+    const analysis = courses.map(course => {
+      const relevantRecords = attendanceData.filter(r => 
+        r.course === course.name || r.courseCode === course.courseCode
+      );
+
+      const attended = relevantRecords.filter(r => 
+        r.attendance[studentId] === "P" || r.attendance[studentId] === "L"
+      ).length;
+
+      const total = relevantRecords.length;
+      const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
+
+      totalPresentCount += attended;
+      totalAbsentCount += (total - attended);
+
+      return {
+        ...course,
+        present: attended,
+        absent: total - attended,
+        total,
+        percentage
+      };
+    });
+
+    const avg = analysis.length > 0 
+      ? Math.round(analysis.reduce((sum, c) => sum + c.percentage, 0) / analysis.length) 
+      : 0;
+
+    const risk = analysis.filter(c => c.total > 0 && c.percentage < 75).length;
+
+    return { courseAnalysis: analysis, stats: { avg, present: totalPresentCount, absent: totalAbsentCount, risk } };
+  }, [attendanceData, courses, user?._id]);
 
   if (loading) return (
     <div className="flex h-[80vh] items-center justify-center">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
     </div>
   );
 
-  // --- লজিক: কোর্স অনুযায়ী ক্যালকুলেশন ---
-  const studentId = user._id.toString();
-  
-  const courseAnalysis = courses.map(course => {
-    const relevantRecords = attendanceData.filter(r => r.course === course.name || r.courseCode === course.courseCode);
-    const attended = relevantRecords.filter(r => r.attendance[studentId] === "P" || r.attendance[studentId] === "L").length;
-    const total = relevantRecords.length;
-    const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
-
-    return {
-      ...course,
-      present: attended,
-      absent: total - attended,
-      total,
-      percentage,
-      status: percentage >= 85 ? "excellent" : percentage >= 75 ? "good" : percentage >= 60 ? "warning" : "danger"
-    };
-  });
-
-  const overallAvg = Math.round(courseAnalysis.reduce((sum, c) => sum + c.percentage, 0) / (courses.length || 1));
-  const totalAttended = courseAnalysis.reduce((sum, c) => sum + c.present, 0);
-  const totalMissed = courseAnalysis.reduce((sum, c) => sum + c.absent, 0);
-  const atRiskCount = courseAnalysis.filter(c => c.percentage < 75).length;
-
   return (
-    <div className="space-y-8 p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="space-y-8 p-4 md:p-8 max-w-7xl mx-auto font-sans">
       
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-3xl font-black italic uppercase tracking-tighter">
-          ATTENDANCE <span className="text-blue-600 tracking-normal italic">REPORT</span>
+          ATTENDANCE <span className="text-blue-600 tracking-normal">REPORT</span>
         </h1>
-        <Button variant="outline" className="rounded-xl font-bold italic uppercase border-2">
-          <Download className="mr-2 h-4 w-4" /> Export PDF
-        </Button>
       </div>
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
-        <StatCard title="Overall Rate" value={`${overallAvg}%`} icon={ClipboardCheck} progress={overallAvg} color="text-blue-600" />
-        <StatCard title="Total Present" value={totalAttended} icon={CheckCircle2} subText="+2 this week" color="text-emerald-500" />
-        <StatCard title="Total Absent" value={totalMissed} icon={XCircle} subText="Across all courses" color="text-rose-500" />
-        <StatCard title="At Risk" value={atRiskCount} icon={AlertTriangle} subText="Below 75%" color="text-amber-500" />
+        <StatCard title="Overall Rate" value={`${stats.avg}%`} icon={ClipboardCheck} progress={stats.avg} color="text-blue-600" />
+        <StatCard title="Total Present" value={stats.present} icon={CheckCircle2} subText="Total attended classes" color="text-emerald-500" />
+        <StatCard title="Total Absent" value={stats.absent} icon={XCircle} subText="Classes missed" color="text-rose-500" />
+        <StatCard title="At Risk" value={stats.risk} icon={AlertTriangle} subText="Below 75% threshold" color="text-amber-500" />
       </div>
 
       <Tabs defaultValue="courses" className="space-y-6">
         <TabsList className="bg-slate-100 p-1 rounded-xl">
-          <TabsTrigger value="courses" className="rounded-lg font-bold italic uppercase px-6">Course Wise</TabsTrigger>
-          <TabsTrigger value="history" className="rounded-lg font-bold italic uppercase px-6">History</TabsTrigger>
+          <TabsTrigger value="courses" className="rounded-lg font-bold italic uppercase px-6 data-[state=active]:bg-white shadow-sm">Course Wise</TabsTrigger>
+          <TabsTrigger value="history" className="rounded-lg font-bold italic uppercase px-6 data-[state=active]:bg-white shadow-sm">History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="courses" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-[2rem]">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white">
             <CardHeader>
               <CardTitle className="italic font-black uppercase text-xl">Academic Breakdown</CardTitle>
-              <CardDescription className="italic font-medium">Detailed attendance per subject for Semester {user?.semester}</CardDescription>
+              <CardDescription className="italic font-medium">Semester {user?.semester} Attendance Analysis</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              {courseAnalysis.map((course, i) => (
+              {courseAnalysis.length > 0 ? courseAnalysis.map((course, i) => (
                 <div key={i} className="space-y-3">
                   <div className="flex justify-between items-end">
                     <div>
-                      <h4 className="font-black italic uppercase text-sm">{course.name || course.course}</h4>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{course.courseCode || course.code}</p>
+                      <h4 className="font-black italic uppercase text-sm tracking-tight">{course.name}</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{course.courseCode}</p>
                     </div>
                     <div className="text-right">
                       <span className={`text-2xl font-black italic ${course.percentage < 75 ? 'text-rose-500' : 'text-slate-900'}`}>
                         {course.percentage}%
                       </span>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase italic">{course.present}/{course.total} Lectures</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase italic tracking-tighter">{course.present}/{course.total} Lectures</p>
                     </div>
                   </div>
                   <Progress value={course.percentage} className={`h-2 ${course.percentage < 75 ? '[&>div]:bg-rose-500' : '[&>div]:bg-slate-900'}`} />
                   <div className="flex gap-4">
-                     <Badge variant="outline" className="rounded-lg font-bold text-[9px] border-emerald-200 text-emerald-600 bg-emerald-50">PRESENT: {course.present}</Badge>
-                     <Badge variant="outline" className="rounded-lg font-bold text-[9px] border-rose-200 text-rose-600 bg-rose-50">ABSENT: {course.absent}</Badge>
+                     <Badge variant="outline" className="rounded-lg font-black text-[9px] border-emerald-200 text-emerald-600 bg-emerald-50">PRESENT: {course.present}</Badge>
+                     <Badge variant="outline" className="rounded-lg font-black text-[9px] border-rose-200 text-rose-600 bg-rose-50">ABSENT: {course.absent}</Badge>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-10 font-bold italic text-slate-400 uppercase">No Courses Found</div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="history">
-          <Card className="border-none shadow-sm rounded-[2.5rem]">
-             <CardContent className="p-0 overflow-hidden">
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+             <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-900 text-white italic uppercase text-[10px] tracking-widest">
@@ -153,15 +171,15 @@ export default function DynamicAttendancePage() {
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {attendanceData.slice(0, 10).map((record, idx) => {
-                        const status = record.attendance[studentId];
+                      {attendanceData.length > 0 ? attendanceData.map((record, idx) => {
+                        const status = record.attendance[user?._id?.toString() || ""];
                         return (
                           <tr key={idx} className="hover:bg-slate-50 transition-colors">
                             <td className="p-5 text-xs font-bold italic">{record.date}</td>
                             <td className="p-5 text-xs font-black uppercase italic">{record.course}</td>
-                            <td className="p-5 text-xs font-medium text-slate-500 italic">{record.teacher}</td>
+                            <td className="p-5 text-xs font-medium text-slate-500 italic uppercase">{record.teacher}</td>
                             <td className="p-5">
-                               <Badge className={`rounded-lg italic uppercase text-[9px] ${
+                               <Badge className={`rounded-lg italic uppercase text-[9px] font-black ${
                                  status === 'P' ? 'bg-emerald-500' : status === 'L' ? 'bg-amber-500' : 'bg-rose-500'
                                }`}>
                                  {status === 'P' ? 'Present' : status === 'L' ? 'Late' : 'Absent'}
@@ -169,7 +187,9 @@ export default function DynamicAttendancePage() {
                             </td>
                           </tr>
                         )
-                      })}
+                      }) : (
+                        <tr><td colSpan={4} className="p-10 text-center font-bold italic text-slate-400 uppercase">No History Found</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -183,7 +203,7 @@ export default function DynamicAttendancePage() {
 
 function StatCard({ title, value, icon: Icon, progress, subText, color }: any) {
   return (
-    <Card className="border-none shadow-sm rounded-3xl overflow-hidden">
+    <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
       <CardContent className="p-6">
         <div className="flex justify-between items-start">
           <div>
