@@ -35,7 +35,7 @@ export default function TeacherDashboardPage() {
     const fetchData = async () => {
       try {
         const res = await fetch(
-          `https://smart-cse-server.vercel.app/teacher/dashboard-overview?email=${session.user.email}`,
+          `http://localhost:5001/teacher/dashboard-overview?email=${session?.user?.email}`,
           {
             headers: {
               Authorization: `Bearer ${(session as any)?.user?.accessToken || ""}`,
