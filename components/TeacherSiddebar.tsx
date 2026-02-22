@@ -27,7 +27,7 @@ import { useUser } from "@/context/UserContext"
 const teacherNavItems = [
   { href: "/teacher", label: "Overview", icon: LayoutDashboard },
   { href: "/teacher/notices", label: "Notices", icon: Bell },
-  { href: "/teacher/routine", label: "Class Routine", icon: Calendar },
+  { href: "/teacher/routines", label: "Class Routine", icon: Calendar },
   { href: "/teacher/courses", label: "My Courses", icon: BookOpen },
   { href: "/teacher/students", label: "Students", icon: Users },
   { href: "/teacher/attendance", label: "Attendance", icon: ClipboardCheck },
