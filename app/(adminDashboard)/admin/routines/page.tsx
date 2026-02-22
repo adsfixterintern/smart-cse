@@ -348,7 +348,7 @@ export default function RoutineManagement() {
                   <SelectValue placeholder="Select Semester" />
                 </SelectTrigger>
                 <SelectContent className="font-bold rounded-xl">
-                  {["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"].map(
+                  {["1", "2", "3", "4", "5", "6", "7", "8"].map(
                     (sem) => (
                       <SelectItem key={sem} value={sem}>
                         {sem} Semester
