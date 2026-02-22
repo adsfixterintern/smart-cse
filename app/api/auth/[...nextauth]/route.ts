@@ -10,39 +10,45 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" },
       },
 
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+     async authorize(credentials) {
+  if (!credentials?.email || !credentials?.password) {
+    throw new Error("Missing email or password");
+  }
 
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          });
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+      }),
+    });
 
-          const data = await res.json();
-          console.log(data.user);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error("Login API Error:", errorData);
+      return null; 
+    }
 
-          if (res.ok && data.user) {
-            return {
-              id: data.user.id,
-              email: data.user.email,
-              role: data.user.role || "student",
-              accessToken: data.token,
-              name: data.user.name || "User",
-            };
-          }
-          return null;
-        } catch (error: any) {
-          console.error("Auth Fetch Error:", error);
-          return null;
-        }
-      },
+    const data = await res.json();
+
+
+    if (data && data.user) {
+      return {
+        id: data.user._id || data.user.id, 
+        email: data.user.email,
+        role: data.user.role || "student",
+        accessToken: data.token,
+        name: data.user.name || "User",
+      };
+    }
+    return null;
+  } catch (error: any) {
+    console.error("Auth Fetch Error:", error);
+    return null;
+  }
+}
     }),
   ],
 
@@ -57,6 +63,7 @@ const handler = NextAuth({
         token.role = (user as any).role;
         token.accessToken = (user as any).accessToken;
         token.id = (user as any).id;
+        console.log(token.role)
       }
       return token;
     },
