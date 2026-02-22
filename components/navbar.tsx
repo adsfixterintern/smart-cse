@@ -16,6 +16,8 @@ import { useUser } from "@/context/UserContext"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
+import logo from "@/public/cse.avif"
+import Image from "next/image"
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -79,8 +81,9 @@ export function Navbar() {
         
         {/* --- LOGO --- */}
         <Link href="/" className="group flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary transition-transform duration-300 group-hover:scale-110">
-            <GraduationCap className="h-5 w-5 text-primary-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-110">
+            {/* <GraduationCap className="h-5 w-5 text-primary-foreground" /> */}
+            <Image src={logo} alt="SmartCSE Logo" width={34} height={34} className="object-contain" />
           </div>
           <span className="text-xl font-bold tracking-tighter text-foreground">SmartCSE</span>
         </Link>

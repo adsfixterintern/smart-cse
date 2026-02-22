@@ -45,11 +45,30 @@ export default function TeacherDashboardPage() {
 
     const fetchCourses = async () => {
       try {
+<<<<<<< HEAD
         const res = await fetch(`${API_RUL}/courses`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+=======
+        const res = await fetch(
+          `http://localhost:5001/teacher/dashboard-overview?email=${session?.user?.email}`,
+          {
+            headers: {
+              Authorization: `Bearer ${(session as any)?.user?.accessToken || ""}`,
+            },
+          }
+        )
+        const result = await res.json()
+        setData(result)
+      } catch (err) {
+        console.error("Teacher dashboard load failed", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+>>>>>>> 9a7939f2df4399f71956279999b9a7dd11fbb1b3
 
         const data = await res.json();
 
