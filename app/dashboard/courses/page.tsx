@@ -41,7 +41,7 @@ export default function StudentCourses() {
       if (!user?.semester) return;
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:5001/courses/${user.semester}`, {
+        const res = await fetch(`https://smart-cse-server.vercel.app/courses/${user.semester}`, {
           headers: { Authorization: `Bearer ${session?.user?.accessToken}` }
         });
         const data = await res.json();
