@@ -32,47 +32,57 @@ interface Course {
 }
 
 export default function TeacherDashboardPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
   const API_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const teacherId = (session?.user as any)?.id;
+  const token = (session?.user as any)?.accessToken;
+
   useEffect(() => {
-    if (!session?.user?.email || !(session.user as any)?.accessToken) {
-      setLoading(false);
-      return;
-    }
+    if (status !== "authenticated") return;
+    if (!teacherId || !token) return;
 
     const fetchCourses = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/teacher/dashboard-overview?email=${session?.user?.email}`,
-          {
-            headers: {
-              Authorization: `Bearer ${(session.user as any).accessToken}`,
-            },
-          }
-        );
+        setLoading(true);
 
-        if (!res.ok) throw new Error("Failed to fetch courses");
+        const res = await fetch(`${API_URL}/courses`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch courses");
+        }
 
         const data: Course[] = await res.json();
-        setCourses(data);
+
+        // filter courses by teacher
+        const myCourses = data.filter(
+          (course) => course.teacherId === teacherId
+        );
+
+        setCourses(myCourses);
       } catch (error) {
-        console.error("Teacher dashboard load failed:", error);
+        console.error("Failed to load courses:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCourses();
-  }, [session, API_URL]);
+  }, [status, teacherId, token, API_URL]);
 
   const totalCourses = useMemo(() => courses.length, [courses]);
 
-  if (loading) {
+  // session loading
+  if (status === "loading" || loading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -93,7 +103,9 @@ export default function TeacherDashboardPage() {
 
         <p className="mt-3 text-slate-400 font-medium">
           You are teaching{" "}
-          <span className="text-white font-bold">{totalCourses}</span>{" "}
+          <span className="text-white font-bold">
+            {totalCourses}
+          </span>{" "}
           course(s).
         </p>
       </section>
@@ -101,7 +113,9 @@ export default function TeacherDashboardPage() {
       {/* ===== COURSE TABLE ===== */}
       <Card className="border-none shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg font-bold">My Courses</CardTitle>
+          <CardTitle className="text-lg font-bold">
+            My Courses
+          </CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -120,7 +134,10 @@ export default function TeacherDashboardPage() {
             <TableBody>
               {courses.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center">
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-8"
+                  >
                     No courses found
                   </TableCell>
                 </TableRow>
@@ -135,11 +152,17 @@ export default function TeacherDashboardPage() {
                       className="h-12 w-20 rounded-lg object-cover"
                     />
                   </TableCell>
-                  <TableCell className="font-bold">{course.name}</TableCell>
+
+                  <TableCell className="font-bold">
+                    {course.name}
+                  </TableCell>
+
                   <TableCell>{course.code}</TableCell>
                   <TableCell>{course.semester}</TableCell>
                   <TableCell>{course.credit}</TableCell>
-                  <TableCell>{course.resources?.length ?? 0}</TableCell>
+                  <TableCell>
+                    {course.resources?.length || 0}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
