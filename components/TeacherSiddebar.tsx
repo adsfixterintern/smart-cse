@@ -1,6 +1,7 @@
 // components/teacher/sidebar.tsx
 "use client"
-
+import logo from "@/public/cse.avif"
+import Image from "next/image"
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -53,8 +54,8 @@ export function TeacherSidebar() {
       {/* LOGO */}
       <Link href="/">
         <div className="p-8 border-b border-slate-800 flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-xl">
-            <GraduationCap className="h-6 w-6 text-white" />
+          <div className=" p-2 rounded-xl">
+             <Image src={logo} alt="SmartCSE Logo" width={34} height={34} className="object-contain" />
           </div>
           <span className="text-2xl font-black text-white tracking-tighter">
             Smart<span className="text-blue-500">Teacher</span>
