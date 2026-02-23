@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import logo from "@/public/cse.avif"
 import {
   Card,
   CardContent,
@@ -134,7 +135,7 @@ export default function RegisterPage() {
         />
         <div className="absolute inset-0 bg-primary/75" />
         <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-12 text-white">
-          <GraduationCap className="h-24 w-24 mb-6" />
+          <Image src={logo} alt="SmartCSE Logo" width={60} height={34} className="object-contain" />
           <h1 className="text-5xl font-extrabold mb-4 tracking-tight">SmartCSE</h1>
           <p className="text-xl max-w-md opacity-90 font-light">
             Empowering the next generation of Computer Science excellence.
@@ -147,8 +148,8 @@ export default function RegisterPage() {
         <Card className="w-full max-w-2xl border-none shadow-none lg:border lg:shadow-xl lg:bg-card">
           <CardHeader className="text-center pb-2">
             <Link href="/" className="mx-auto mb-6 flex justify-center items-center gap-2">
-              <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/20">
-                <GraduationCap className="h-7 w-7 text-white" />
+              <div className=" p-2.5 rounded-xl shadow-lg shadow-primary/20">
+                          <Image src={logo} alt="SmartCSE Logo" width={34} height={34} className="object-contain" />
               </div>
               <span className="text-3xl font-black tracking-tighter text-primary italic">
                 SmartCSE
