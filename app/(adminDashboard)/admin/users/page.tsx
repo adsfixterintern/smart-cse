@@ -99,7 +99,7 @@ export default function AllUsersPage() {
     try {
       setLoading(true);
 
-      const res = await axios.get("http://localhost:5001/users", {
+      const res = await axios.get("https://smart-cse-server-eta.vercel.app/users", {
         headers: {
           Authorization: `Bearer ${(session?.user as { accessToken?: string })?.accessToken}`,
         },
@@ -118,7 +118,7 @@ export default function AllUsersPage() {
 
   const updateRole = async (id: string, newRole: string) => {
     await axios.patch(
-      `http://localhost:5001/users/${id}`,
+      `https://smart-cse-server-eta.vercel.app/users/${id}`,
       { role: newRole },
       {
         headers: {
@@ -130,7 +130,7 @@ export default function AllUsersPage() {
   };
 
   const deleteUser = async (id: string) => {
-    await axios.delete(`http://localhost:5001/users/${id}`, {
+    await axios.delete(`https://smart-cse-server-eta.vercel.app/users/${id}`, {
       headers: {
         Authorization: `Bearer ${(session?.user as { accessToken?: string })?.accessToken}`,
       },
@@ -140,7 +140,7 @@ export default function AllUsersPage() {
 
   const toggleBan = async (id: string, currentStatus?: boolean) => {
     await axios.patch(
-      `http://localhost:5001/users/${id}`,
+      `https://smart-cse-server-eta.vercel.app/users/${id}`,
       { banned: !currentStatus },
       {
         headers: {
@@ -169,7 +169,7 @@ export default function AllUsersPage() {
 
       setAddingUser(true);
 
-      await axios.post("http://localhost:5001/users", {
+      await axios.post("https://smart-cse-server-eta.vercel.app/users", {
         name: newName,
         email: newEmail,
         password: newPassword,
