@@ -83,7 +83,6 @@ export default function AttendanceSheetPage() {
     fetchCourses();
   }, [semester, apiUrl, session]);
 
-  // ৩. ডেইলি শীট লোড করা (Batch ফিল্টার ছাড়া)
   const loadDailySheet = async () => {
     if (!semester || !course) {
       toast.error("Please select Semester and Course");
@@ -91,7 +90,6 @@ export default function AttendanceSheetPage() {
     }
 
     setIsMonthlyView(false);
-    // শুধুমাত্র সেমিস্টার অনুযায়ী স্টুডেন্ট ফিল্টার
     const filtered = allStudents
       .filter((s) => s.semester === semester)
       .sort((a, b) => a.studentId.localeCompare(b.studentId));
