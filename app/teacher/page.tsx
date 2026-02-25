@@ -24,14 +24,16 @@ interface Course {
 }
 
 interface Routine {
+  room: string;
   _id: string;
   semester: string;
   courseName: string;
+  courseCode: string;
   teacherName: string;
   teacherId: string;
   startTime: string;
-  day: string;
-  room?: string;
+  day: string; 
+  roomNumber?: string;
 }
 
 export default function TeacherDashboardPage() {
@@ -46,9 +48,14 @@ export default function TeacherDashboardPage() {
   const token = (session?.user as any)?.accessToken;
   const email = session?.user?.email;
 
-  const todayName = useMemo(() => 
-    new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date()), 
-  []);
+  // বর্তমান তারিখ (YYYY-MM-DD) এবং দিনের নাম (Wednesday) জেনারেট করা
+  const { todayStr, todayName } = useMemo(() => {
+    const now = new Date();
+    return {
+      todayStr: now.toISOString().split('T')[0],
+      todayName: new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(now)
+    };
+  }, []);
 
   useEffect(() => {
     if (status !== "authenticated" || !token || !email) return;
@@ -57,41 +64,56 @@ export default function TeacherDashboardPage() {
       try {
         setLoading(true);
 
-        // ১. জেনারেল রুটিন (আজকের সব ক্লাস)
-        const routineRes = await fetch(`${API_URL}/routines`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const allRoutines: Routine[] = await routineRes.json();
-        setAllTodaysRoutines(allRoutines.filter(r => r.day.toLowerCase() === todayName.toLowerCase()));
-
-        // ২. টিচারের আজকের নির্দিষ্ট ক্লাস (আপনার নতুন এপিআই দিয়ে)
-        const myAssignedRes = await fetch(`${API_URL}/my-assigned-classes?day=${todayName}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (myAssignedRes.ok) {
-          setMyAssignedClasses(await myAssignedRes.json());
-        }
+        // ১. টিচারের প্রোফাইল থেকে teacherId সংগ্রহ করা (email দিয়ে)
         const userRes = await fetch(`${API_URL}/users/email/${email}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const teacherProfile = await userRes.json();
         const tId = teacherProfile.teacherId;
 
+        // ২. আপনার এপিআই ব্যবহার করে টিচারের আজকের ক্লাস আনা (teacherId দিয়ে)
+        const myTodayRes = await fetch(`${API_URL}/teacher-today-classes?teacherId=${tId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (myTodayRes.ok) {
+          const data = await myTodayRes.json();
+          setMyAssignedClasses(data.classes || []);
+        }
+
+        // ৩. /routines এপিআই থেকে ডাটা নিয়ে আজকের বারের (Day) সাথে মিলিয়ে ফিল্টার করা
+        const routineRes = await fetch(`${API_URL}/routines`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (routineRes.ok) {
+          const allRoutines: Routine[] = await routineRes.json();
+          // ডাটাবেস থেকে আসা ডাটাকে আজকের দিনের সাথে ফিল্টার করা
+          const filtered = allRoutines.filter(
+            (r) => r.day.toLowerCase() === todayName.toLowerCase()
+          );
+          // সময় অনুযায়ী সর্ট করা
+          const sorted = filtered.sort((a, b) => a.startTime.localeCompare(b.startTime));
+          setAllTodaysRoutines(sorted);
+        }
+
+        // ৪. টিচারের আন্ডারে থাকা কোর্সের তালিকা
         const courseRes = await fetch(`${API_URL}/courses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const allCourses: Course[] = await courseRes.json();
-        setMyCourses(allCourses.filter(c => c.teacherId === tId)); 
+        if (courseRes.ok) {
+          const allCourses: Course[] = await courseRes.json();
+          setMyCourses(allCourses.filter(c => c.teacherId === tId));
+        }
 
       } catch (error) {
-        console.error("Fetch failed:", error);
+        console.error("Dashboard Loading Error:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [status, token, email, API_URL, todayName]);
+  }, [status, token, email, API_URL, todayName, todayStr]);
 
   if (loading) return (
     <div className="flex h-[80vh] items-center justify-center">
@@ -102,14 +124,14 @@ export default function TeacherDashboardPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-10 p-4 md:p-8">
       
-      {/* --- WELCOME HEADER --- */}
+      {/* --- HEADER --- */}
       <section className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-10 text-white shadow-2xl">
         <div className="relative z-10">
           <h1 className="text-4xl font-black tracking-tighter md:text-5xl italic uppercase">
             Instructor <span className="text-blue-400">Portal</span>
           </h1>
           <p className="mt-2 text-slate-400 font-bold tracking-widest uppercase text-xs">
-            {session?.user?.name} | Computer Science & Engineering
+            {session?.user?.name} | {todayName}, {todayStr}
           </p>
           
           <div className="mt-8 flex flex-wrap gap-4">
@@ -130,7 +152,7 @@ export default function TeacherDashboardPage() {
 
       <div className="grid gap-10 lg:grid-cols-12">
         
-        {/* --- SECTION 1: MY CLASSES TODAY (LEFT) --- */}
+        {/* --- SECTION 1: MY TODAY'S CLASSES --- */}
         <div className="lg:col-span-4 space-y-6">
           <h2 className="text-xl font-black uppercase italic flex items-center gap-2 text-blue-600 tracking-tighter">
             <UserCheck size={24} /> My Schedule Today
@@ -145,15 +167,17 @@ export default function TeacherDashboardPage() {
                         <Clock size={14} />
                         <span className="text-xs font-black">{cls.startTime}</span>
                       </div>
-                      <span className="font-bold text-[10px] uppercase tracking-widest bg-black/20 px-2 py-1 rounded">Sem {cls.semester}</span>
+                      <span className="font-bold text-[10px] uppercase tracking-widest bg-black/20 px-2 py-1 rounded">
+                        {cls.courseCode}
+                      </span>
                     </div>
                     <h3 className="text-xl font-black leading-tight mb-6 uppercase italic">{cls.courseName}</h3>
                     <div className="flex justify-between items-center pt-4 border-t border-white/20">
                       <div className="flex items-center gap-1.5 text-xs font-bold uppercase">
-                        <MapPin size={14} className="text-blue-200" /> {cls.room || "Lab-01"}
+                        <MapPin size={14} className="text-blue-200" /> {cls.roomNumber || "N/A"}
                       </div>
                       <Link 
-                        href={`/teacher/attendance?semester=${cls.semester}&course=${cls.courseName}`} 
+                        href={`/teacher/attendance?semester=${cls.semester}&course=${cls.courseName}&date=${todayStr}`} 
                         className="bg-white text-blue-600 p-2.5 rounded-2xl hover:bg-blue-50 transition-colors shadow-lg"
                       >
                         <ExternalLink size={18}/>
@@ -164,23 +188,23 @@ export default function TeacherDashboardPage() {
               ))
             ) : (
               <div className="p-12 border-4 border-dashed rounded-[2.5rem] text-center text-slate-300 font-black uppercase italic text-xs tracking-[0.2em] bg-slate-50">
-                No classes assigned today
+                No classes assigned for you today
               </div>
             )}
           </div>
         </div>
 
-        {/* --- SECTION 2: GENERAL TODAY'S ROUTINE (RIGHT) --- */}
+        {/* --- SECTION 2: DEPT ROUTINE (FILTERED BY DAY) --- */}
         <div className="lg:col-span-8 space-y-6">
           <h2 className="text-xl font-black uppercase italic flex items-center gap-2 text-slate-800 tracking-tighter">
-            <Clock size={24} /> Department Routine ({todayName})
+            <Clock size={24} /> Dept. Routine ({todayName})
           </h2>
           <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">
             <Table>
               <TableHeader className="bg-slate-900">
                 <TableRow className="hover:bg-slate-900">
                   <TableHead className="text-white font-black uppercase text-[10px] py-5 pl-6">Time</TableHead>
-                  <TableHead className="text-white font-black uppercase text-[10px]">Course & Semester</TableHead>
+                  <TableHead className="text-white font-black uppercase text-[10px]">Course & Sem</TableHead>
                   <TableHead className="text-white font-black uppercase text-[10px]">Instructor</TableHead>
                   <TableHead className="text-white font-black uppercase text-[10px] text-center pr-6">Room</TableHead>
                 </TableRow>
@@ -192,11 +216,11 @@ export default function TeacherDashboardPage() {
                       <TableCell className="font-black text-blue-600 pl-6">{r.startTime}</TableCell>
                       <TableCell>
                         <div className="font-bold text-slate-800 uppercase text-sm">{r.courseName}</div>
-                        <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">Semester {r.semester}</div>
+                        <div className="text-[10px] text-slate-400 font-black uppercase mt-0.5">Semester {r.semester}</div>
                       </TableCell>
                       <TableCell className="font-bold text-slate-600 text-xs">{r.teacherName}</TableCell>
                       <TableCell className="text-center pr-6">
-                        <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border border-slate-200">
+                        <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase border border-slate-200">
                           {r.room || "N/A"}
                         </span>
                       </TableCell>
@@ -204,7 +228,9 @@ export default function TeacherDashboardPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-40 text-center font-bold text-slate-400 italic">No classes today.</TableCell>
+                    <TableCell colSpan={4} className="h-40 text-center font-bold text-slate-400 italic uppercase text-xs">
+                      No routine found for {todayName}
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -212,7 +238,7 @@ export default function TeacherDashboardPage() {
           </Card>
         </div>
 
-        {/* --- SECTION 3: MY ASSIGNED COURSES (BOTTOM FULL WIDTH) --- */}
+        {/* --- SECTION 3: COURSE INVENTORY --- */}
         <div className="lg:col-span-12 space-y-6 pt-10">
           <h2 className="text-xl font-black uppercase italic flex items-center gap-2 text-slate-800 tracking-tighter">
             <BookOpen size={24} /> My Assigned Course Inventory
@@ -222,7 +248,7 @@ export default function TeacherDashboardPage() {
               <TableHeader className="bg-slate-50 border-b">
                 <TableRow>
                   <TableHead className="font-black uppercase text-[10px] py-5 pl-8 text-slate-500">Course Detail</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] text-slate-500">Course Code</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] text-slate-500">Code</TableHead>
                   <TableHead className="font-black uppercase text-[10px] text-slate-500">Semester</TableHead>
                   <TableHead className="font-black uppercase text-[10px] text-center pr-8 text-slate-500">Credits</TableHead>
                 </TableRow>
@@ -232,38 +258,26 @@ export default function TeacherDashboardPage() {
                   myCourses.map((course) => (
                     <TableRow key={course._id} className="hover:bg-slate-50/50 border-slate-50 transition-colors">
                       <TableCell className="py-5 pl-8">
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                            <BookOpen size={20} />
-                          </div>
-                          <span className="font-black text-slate-800 uppercase italic tracking-tight">{course.name}</span>
-                        </div>
+                        <span className="font-black text-slate-800 uppercase italic tracking-tight">{course.name}</span>
                       </TableCell>
                       <TableCell>
-                        <code className="bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-black text-slate-600">
-                          {course.code}
-                        </code>
+                        <code className="bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-black text-slate-600">{course.code}</code>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                          Batch {course.semester}
-                        </span>
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Semester {course.semester}</span>
                       </TableCell>
-                      <TableCell className="text-center pr-8 font-black text-blue-600">
-                        {course.credit}
-                      </TableCell>
+                      <TableCell className="text-center pr-8 font-black text-blue-600">{course.credit}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-slate-400 font-bold italic uppercase text-xs">No courses assigned to your profile yet.</TableCell>
+                    <TableCell colSpan={4} className="h-32 text-center text-slate-400 font-bold italic uppercase text-xs">No courses assigned to your profile.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </Card>
         </div>
-
       </div>
     </div>
   );
