@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2, Save, GraduationCap, PlusCircle, Database, Trash2, Edit, Eye, X, CheckCircle2, FileText } from "lucide-react"
+import { Loader2, GraduationCap, Database, Trash2, Edit, Eye, FileText, Search } from "lucide-react"
 import toast from "react-hot-toast"
 import Swal from "sweetalert2"
 
@@ -51,8 +51,10 @@ export default function ResultManagement() {
   }, [activeTab])
 
   const handleFilterChange = async (semLabel: string) => {
-    const semValue = semesterMap[semLabel]
-    setFilter({ ...filter, semester: semValue })
+    const semValue = semesterMap[semLabel] || ""
+    setFilter({ ...filter, semester: semValue, courseCode: "" }) // Reset course on sem change
+    if (!semValue) return
+
     setFetching(true)
     try {
       const [stdRes, crsRes] = await Promise.all([
@@ -69,7 +71,6 @@ export default function ResultManagement() {
     if (!filter.courseCode) return toast.error("Select course first")
     
     setLoading(true)
-    // Key names must match backend precisely
     const payload = {
       ct: Number(marks.ct || 0),
       mid: Number(marks.mid || 0),
@@ -137,6 +138,13 @@ export default function ResultManagement() {
     setLoading(false)
   }
 
+  // Helper to filter results in Records Tab
+  const filteredRecords = allResults.filter(res => {
+    const matchSemester = filter.semester === "" || res.semester === filter.semester;
+    const matchCourse = filter.courseCode === "" || res.courseCode.toLowerCase().includes(filter.courseCode.toLowerCase());
+    return matchSemester && matchCourse;
+  });
+
   return (
     <div className="w-full max-w-[98%] mx-auto py-6 space-y-6">
       {/* NAVIGATION HEADER */}
@@ -148,14 +156,14 @@ export default function ResultManagement() {
         <div className="flex p-1 bg-slate-100 rounded-xl">
           <Button 
             variant={activeTab === "add" ? "default" : "ghost"} 
-            onClick={() => setActiveTab("add")}
+            onClick={() => { setActiveTab("add"); setFilter({semester: "", courseCode: "", courseName: ""}); }}
             className={`rounded-lg font-bold px-8 ${activeTab === "add" ? "bg-white text-slate-900 hover:bg-white shadow-sm" : "text-slate-500"}`}
           >
             Entry
           </Button>
           <Button 
             variant={activeTab === "view" ? "default" : "ghost"} 
-            onClick={() => setActiveTab("view")}
+            onClick={() => { setActiveTab("view"); setFilter({semester: "", courseCode: "", courseName: ""}); }}
             className={`rounded-lg font-bold px-8 ${activeTab === "view" ? "bg-white text-slate-900 hover:bg-white shadow-sm" : "text-slate-500"}`}
           >
             Records
@@ -164,168 +172,191 @@ export default function ResultManagement() {
       </div>
 
       {activeTab === "add" ? (
-     <div className="w-full space-y-6">
-  {/* TOP FILTER SECTION */}
-  <Card className="p-6 border-none shadow-sm rounded-2xl bg-white border-t-4 border-slate-900">
-    <div className="flex flex-col md:flex-row items-end gap-6">
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-        <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 1: Select Semester</Label>
-          <Select onValueChange={handleFilterChange}>
-            <SelectTrigger className="rounded-xl h-12 font-bold border-slate-200 bg-slate-50/50">
-              <SelectValue placeholder="Choose Semester" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.keys(semesterMap).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 2: Select Course</Label>
-          <Select onValueChange={(v) => {
-            const c = semesterCourses.find(course => course.code === v); 
-            setFilter({...filter, courseCode: v, courseName: c?.name});
-          }}>
-            <SelectTrigger className="rounded-xl h-12 font-bold border-slate-200 bg-slate-50/50" disabled={semesterCourses.length === 0}>
-              <SelectValue placeholder="Choose Course" />
-            </SelectTrigger>
-            <SelectContent>
-              {semesterCourses.map((c: any) => <SelectItem key={c._id} value={c.code}>{c.code} - {c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4 bg-slate-900 text-white px-6 py-3 rounded-2xl min-w-[180px] justify-center shadow-lg shadow-slate-200">
-        <div className="text-center">
-          <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">Total Students</p>
-          <p className="text-2xl font-black italic leading-none">{semesterStudents.length}</p>
-        </div>
-      </div>
-    </div>
-  </Card>
-
-  {/* FULL WIDTH TABLE SECTION */}
-  <Card className="border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader className="bg-slate-900">
-          <TableRow className="hover:bg-transparent border-none h-14">
-            <TableHead className="text-white font-bold text-[10px] uppercase pl-8">Student Identity</TableHead>
-            <TableHead className="text-center text-white font-bold text-[10px] uppercase">
-              Marks Distribution (CT:5 | MID:20 | ATT:5 | PRE:5 | ASG:5 | FINAL:60)
-            </TableHead>
-            <TableHead className="text-right text-white font-bold text-[10px] uppercase pr-8">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {semesterStudents.map((s) => (
-            <TableRow key={s._id} className="hover:bg-slate-50 transition-colors border-slate-100">
-              <TableCell className="pl-8 py-5">
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-800">{s.name}</span>
-                  <span className="text-[10px] font-black text-primary italic uppercase">{s.studentId}</span>
+        <div className="w-full space-y-6">
+          <Card className="p-6 border-none shadow-sm rounded-2xl bg-white border-t-4 border-slate-900">
+            <div className="flex flex-col md:flex-row items-end gap-6">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 1: Select Semester</Label>
+                  <Select onValueChange={handleFilterChange}>
+                    <SelectTrigger className="rounded-xl h-12 font-bold border-slate-200 bg-slate-50/50">
+                      <SelectValue placeholder="Choose Semester" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(semesterMap).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-4 justify-center items-center">
-                  {[
-                    { label: "ct", key: "ct" },
-                    { label: "mid", key: "mid" },
-                    { label: "att", key: "att" },
-                    { label: "pre", key: "pre" },
-                    { label: "asg", key: "asg" },
-                    { label: "final", key: "final" }
-                  ].map((f) => (
-                    <div key={f.key} className="flex flex-col items-center gap-1.5">
-                      <span className="text-[9px] font-black uppercase text-slate-500 tracking-tighter">{f.label}</span>
-                      <Input 
-                        type="number" 
-                        className="w-16 h-12 text-center font-black text-lg rounded-xl border-2 border-slate-200 bg-slate-50 focus:border-slate-900 focus:ring-0 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        onChange={(e) => setStudentMarks({
-                          ...studentMarks, 
-                          [s.studentId]: {
-                            ...studentMarks[s.studentId], 
-                            [f.key === "final" ? "finalMark" : f.key]: e.target.value
-                          }
-                        })}
-                      />
-                    </div>
-                  ))}
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 2: Select Course</Label>
+                  <Select onValueChange={(v) => {
+                    const c = semesterCourses.find(course => course.code === v); 
+                    setFilter({...filter, courseCode: v, courseName: c?.name});
+                  }}>
+                    <SelectTrigger className="rounded-xl h-12 font-bold border-slate-200 bg-slate-50/50" disabled={semesterCourses.length === 0}>
+                      <SelectValue placeholder="Choose Course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {semesterCourses.map((c: any) => <SelectItem key={c._id} value={c.code}>{c.code} - {c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </TableCell>
-              <TableCell className="text-right pr-8">
-                <Button 
-                  size="sm" 
-                  onClick={() => handleSaveResult(s)} 
-                  disabled={loading} 
-                  className="bg-slate-900 hover:bg-emerald-600 transition-all font-black text-[10px] rounded-xl h-12 px-6 shadow-md uppercase tracking-tighter"
-                >
-                  Save Marks
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-    
-    {semesterStudents.length === 0 && (
-      <div className="py-24 text-center">
-        <div className="inline-flex p-4 rounded-full bg-slate-50 mb-4">
-          <Database className="h-8 w-8 text-slate-300" />
-        </div>
-        <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">
-          Please select semester and course to load students
-        </p>
-      </div>
-    )}
-  </Card>
-</div>
-      ) : (
-        /* RECORDS VIEW */
-        <Card className="border-none shadow-xl rounded-2xl overflow-hidden bg-white">
-          <Table>
-            <TableHeader className="bg-slate-50 border-b">
-              <TableRow>
-                <TableHead className="font-black text-[10px] uppercase text-slate-900">Student ID</TableHead>
-                <TableHead className="font-black text-[10px] uppercase text-slate-900">Course Code</TableHead>
-                <TableHead className="font-black text-[10px] uppercase text-center text-slate-900">Grade Point</TableHead>
-                <TableHead className="font-black text-[10px] uppercase text-center text-slate-900">Total Marks</TableHead>
-                <TableHead className="font-black text-[10px] uppercase text-right px-8 text-slate-900">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allResults.map((res: any) => (
-                <TableRow key={res._id} className="hover:bg-slate-50 border-slate-100 group transition-all">
-                  <TableCell className="font-black text-slate-700 py-5">{res.studentId}</TableCell>
-                  <TableCell className="font-bold text-xs uppercase text-slate-400">{res.courseCode}</TableCell>
-                  <TableCell className="text-center">
-                    <span className="bg-slate-900 text-white px-3 py-1 rounded-lg font-black text-[10px] italic shadow-sm leading-none">
-                      {res.grade} | {res.point.toFixed(2)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center font-black text-lg text-slate-800 tracking-tighter">{res.marks}</TableCell>
-                  <TableCell className="text-right px-8 space-x-2">
-                    <Button variant="outline" size="icon" onClick={() => { setSelectedResult(res); setIsViewModalOpen(true); }} className="h-9 w-9 text-emerald-600 border-emerald-100 bg-emerald-50 hover:bg-emerald-600 hover:text-white transition-all">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={() => { setSelectedResult(res); setIsEditModalOpen(true); }} className="h-9 w-9 text-blue-600 border-blue-100 hover:bg-blue-600 hover:text-white transition-all">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={() => handleDelete(res._id)} className="h-9 w-9 text-red-500 border-red-100 hover:bg-red-600 hover:text-white transition-all">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+              </div>
+              <div className="flex items-center gap-4 bg-slate-900 text-white px-6 py-3 rounded-2xl min-w-[180px] justify-center shadow-lg shadow-slate-200">
+                <div className="text-center">
+                  <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">Total Students</p>
+                  <p className="text-2xl font-black italic leading-none">{semesterStudents.length}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
+            <Table>
+              <TableHeader className="bg-slate-900">
+                <TableRow className="hover:bg-transparent border-none h-14">
+                  <TableHead className="text-white font-bold text-[10px] uppercase pl-8">Student Identity</TableHead>
+                  <TableHead className="text-center text-white font-bold text-[10px] uppercase">Marks Distribution (CT:5 | MID:20 | ATT:5 | PRE:5 | ASG:5 | FINAL:60)</TableHead>
+                  <TableHead className="text-right text-white font-bold text-[10px] uppercase pr-8">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+              </TableHeader>
+              <TableBody>
+                {semesterStudents.map((s) => (
+                  <TableRow key={s._id} className="hover:bg-slate-50 transition-colors border-slate-100">
+                    <TableCell className="pl-8 py-5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800">{s.name}</span>
+                        <span className="text-[10px] font-black text-primary italic uppercase">{s.studentId}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-4 justify-center items-center">
+                        {["ct", "mid", "att", "pre", "asg", "final"].map((f) => (
+                          <div key={f} className="flex flex-col items-center gap-1.5">
+                            <span className="text-[9px] font-black uppercase text-slate-500 tracking-tighter">{f}</span>
+                            <Input 
+                              type="number" 
+                              className="w-16 h-12 text-center font-black text-lg rounded-xl border-2 border-slate-200 bg-slate-50 focus:border-slate-900"
+                              onChange={(e) => setStudentMarks({
+                                ...studentMarks, 
+                                [s.studentId]: { ...studentMarks[s.studentId], [f === "final" ? "finalMark" : f]: e.target.value }
+                              })}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right pr-8">
+                      <Button size="sm" onClick={() => handleSaveResult(s)} disabled={loading} className="bg-slate-900 hover:bg-emerald-600 transition-all font-black text-[10px] rounded-xl h-12 px-6 shadow-md uppercase tracking-tighter">
+                        Save Marks
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {semesterStudents.length === 0 && (
+              <div className="py-24 text-center">
+                <Database className="h-8 w-8 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Select semester and course to load students</p>
+              </div>
+            )}
+          </Card>
+        </div>
+      ) : (
+        /* RECORDS VIEW WITH FILTERING */
+        <div className="space-y-6">
+          <Card className="p-6 border-none shadow-sm rounded-2xl bg-white border-t-4 border-slate-900">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400">Filter Semester</Label>
+                <Select onValueChange={(v) => setFilter({ ...filter, semester: semesterMap[v] || "" })}>
+                  <SelectTrigger className="rounded-xl h-12 font-bold border-slate-200 bg-slate-50/50">
+                    <SelectValue placeholder="All Semesters" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Semesters</SelectItem>
+                    {Object.keys(semesterMap).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400">Search Course Code</Label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input 
+                    placeholder="Enter Course Code..." 
+                    className="rounded-xl h-12 pl-11 font-bold border-slate-200 bg-slate-50/50 uppercase"
+                    value={filter.courseCode}
+                    onChange={(e) => setFilter({ ...filter, courseCode: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-end">
+                <div className="bg-slate-900 text-white p-3 rounded-2xl w-full flex justify-between items-center shadow-lg shadow-slate-200">
+                   <span className="text-[10px] font-bold uppercase opacity-60 ml-2">Filtered Records</span>
+                   <span className="text-2xl font-black italic mr-2">{filteredRecords.length}</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="border-none shadow-xl rounded-2xl overflow-hidden bg-white">
+            <Table>
+              <TableHeader className="bg-slate-50 border-b">
+                <TableRow>
+                  <TableHead className="font-black text-[10px] uppercase text-slate-900 pl-8">Student ID</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase text-slate-900">Course & Sem</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase text-center text-slate-900">Grade Info</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase text-center text-slate-900">Total Marks</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase text-right px-8 text-slate-900">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRecords.map((res: any) => (
+                  <TableRow key={res._id} className="hover:bg-slate-50 border-slate-100 group transition-all">
+                    <TableCell className="font-black text-slate-700 py-5 pl-8">{res.studentId}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-xs uppercase text-slate-800">{res.courseCode}</span>
+                        <span className="text-[9px] font-black text-primary uppercase italic">Semester: {res.semester}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="bg-slate-900 text-white px-3 py-1 rounded-lg font-black text-[10px] italic">
+                        {res.grade} | {res.point.toFixed(2)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center font-black text-lg text-slate-800 tracking-tighter">{res.marks}</TableCell>
+                    <TableCell className="text-right px-8 space-x-2">
+                      <Button variant="outline" size="icon" onClick={() => { setSelectedResult(res); setIsViewModalOpen(true); }} className="h-9 w-9 text-emerald-600 border-emerald-100 bg-emerald-50 hover:bg-emerald-600 hover:text-white transition-all">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" onClick={() => { setSelectedResult(res); setIsEditModalOpen(true); }} className="h-9 w-9 text-blue-600 border-blue-100 hover:bg-blue-600 hover:text-white transition-all">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" onClick={() => handleDelete(res._id)} className="h-9 w-9 text-red-500 border-red-100 hover:bg-red-600 hover:text-white transition-all">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {filteredRecords.length === 0 && (
+              <div className="py-20 text-center">
+                <FileText className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No matching records found</p>
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
-      {/* VIEW DETAILS MODAL (RESULT CARD) */}
+      {/* VIEW DETAILS MODAL */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
         <DialogContent className="max-w-2xl rounded-[2.5rem] border-none p-0 overflow-hidden shadow-2xl bg-white">
           <div className="bg-slate-900 p-8 text-white relative">
@@ -335,12 +366,11 @@ export default function ResultManagement() {
                   <p className="text-slate-400 font-bold text-xs mt-1 uppercase tracking-widest">{selectedResult?.studentId} | {selectedResult?.courseName}</p>
                </div>
                <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md text-center border border-white/10">
-                  <p className="text-[10px] font-bold text-white/50 uppercase">CGPA/Point</p>
+                  <p className="text-[10px] font-bold text-white/50 uppercase">Point</p>
                   <p className="text-3xl font-black italic text-primary">{selectedResult?.point.toFixed(2)}</p>
                </div>
             </div>
           </div>
-          
           <div className="p-8 space-y-6">
              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {selectedResult?.breakdown && Object.entries(selectedResult.breakdown).map(([key, val]: any) => (
@@ -350,15 +380,12 @@ export default function ResultManagement() {
                   </div>
                 ))}
              </div>
-
-             <div className="bg-slate-900 rounded-[2rem] p-6 flex justify-between items-center text-white shadow-xl shadow-slate-200">
+             <div className="bg-slate-900 rounded-[2rem] p-6 flex justify-between items-center text-white">
                 <div className="flex items-center gap-4">
-                   <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center font-black text-xl italic text-primary border border-white/10">
-                      {selectedResult?.grade}
-                   </div>
+                   <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center font-black text-xl italic text-primary border border-white/10">{selectedResult?.grade}</div>
                    <div>
                       <p className="text-[10px] font-bold text-white/50 uppercase">Final Assessment</p>
-                      <h4 className="text-lg font-black tracking-tight uppercase">Passed with Excellence</h4>
+                      <h4 className="text-lg font-black uppercase">Result Published</h4>
                    </div>
                 </div>
                 <div className="text-right">
@@ -367,11 +394,8 @@ export default function ResultManagement() {
                 </div>
              </div>
           </div>
-
-          <div className="p-6 bg-slate-50 flex gap-4 justify-center border-t border-slate-100">
-             <Button onClick={() => setIsViewModalOpen(false)} className="bg-slate-900 text-white font-black px-12 h-12 rounded-2xl uppercase italic tracking-tighter shadow-lg">
-                Close Report
-             </Button>
+          <div className="p-6 bg-slate-50 flex justify-center border-t">
+             <Button onClick={() => setIsViewModalOpen(false)} className="bg-slate-900 text-white font-black px-12 h-12 rounded-2xl uppercase italic tracking-tighter">Close Report</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -383,7 +407,6 @@ export default function ResultManagement() {
             <h2 className="text-2xl font-black uppercase italic tracking-tighter">Edit Performance</h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-widest">{selectedResult?.studentId} | {selectedResult?.courseCode}</p>
           </div>
-          
           <div className="p-8 grid grid-cols-2 sm:grid-cols-3 gap-6">
             {selectedResult?.breakdown && Object.keys(selectedResult.breakdown).map((f) => (
               <div key={f} className="space-y-1">
@@ -391,7 +414,7 @@ export default function ResultManagement() {
                 <Input 
                   type="number" 
                   value={selectedResult.breakdown[f]} 
-                  className="h-12 rounded-xl font-black text-lg border-2 focus:border-slate-900 transition-all"
+                  className="h-12 rounded-xl font-black text-lg border-2 focus:border-slate-900"
                   onChange={(e) => setSelectedResult({
                     ...selectedResult, 
                     breakdown: {...selectedResult.breakdown, [f]: e.target.value}
@@ -400,8 +423,7 @@ export default function ResultManagement() {
               </div>
             ))}
           </div>
-
-          <div className="p-6 bg-slate-50 flex gap-4 justify-end border-t border-slate-100">
+          <div className="p-6 bg-slate-50 flex gap-4 justify-end border-t">
              <Button variant="ghost" onClick={() => setIsEditModalOpen(false)} className="font-bold text-slate-500">Cancel</Button>
              <Button onClick={handleUpdateSubmit} disabled={loading} className="bg-slate-900 text-white font-black px-10 h-12 rounded-2xl shadow-lg hover:bg-emerald-600 transition-all uppercase italic">
                 {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "Update Now"}
