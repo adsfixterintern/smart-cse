@@ -60,7 +60,7 @@ export default function StudentCourses() {
       try {
         setLoading(true);
         const res = await fetch(
-          `https://smart-cse-server-eta.vercel.app/courses/${user.semester}`,
+          `http://localhost:5001/courses/${user.semester}`,
           {
             headers: { Authorization: `Bearer ${session?.user?.accessToken}` },
           },

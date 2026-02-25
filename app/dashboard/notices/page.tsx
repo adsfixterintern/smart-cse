@@ -25,9 +25,7 @@ export default function StudentNoticesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://smart-cse-server-eta.vercel.app";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
   useEffect(() => {
     const fetchNotices = async () => {
