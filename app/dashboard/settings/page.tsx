@@ -50,9 +50,7 @@ export default function StudentSettings() {
 
     setUploading(true);
     try {
-      const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL ||
-        "http://localhost:5001";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
       const res = await fetch(`${apiUrl}/upload-image`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -91,8 +89,7 @@ export default function StudentSettings() {
         setSaving(true);
         try {
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ||
-            "http://localhost:5001";
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
           // _id এবং immutable fields বাদ দিয়ে ডাটা পাঠানো
           const { _id, email, password, role, createdAt, ...cleanData } =

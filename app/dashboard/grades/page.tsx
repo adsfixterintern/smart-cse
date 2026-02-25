@@ -52,9 +52,7 @@ export default function ResultsPage() {
   const [selectedSemester, setSelectedSemester] = useState("all");
   const [searchQuery, setSearchQuery] = useState(""); // সার্চ স্টেট
 
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:5001";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
   useEffect(() => {
     const fetchData = async () => {

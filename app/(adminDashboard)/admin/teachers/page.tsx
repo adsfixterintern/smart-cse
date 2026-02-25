@@ -62,9 +62,7 @@ interface Teacher {
 export default function FacultyManagement() {
   const { data: session } = useSession();
   const token = (session?.user as any)?.accessToken;
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:5001";
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);

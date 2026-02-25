@@ -76,7 +76,6 @@ interface UserType {
 
 export default function AllUsersPage() {
   const { data: session, status } = useSession();
-  
 
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +89,10 @@ export default function AllUsersPage() {
 
   //
   useEffect(() => {
-    if (status === "authenticated" && (session?.user as { accessToken?: string })?.accessToken) {
+    if (
+      status === "authenticated" &&
+      (session?.user as { accessToken?: string })?.accessToken
+    ) {
       fetchUsers();
     }
   }, [session, status]);
@@ -162,7 +164,7 @@ export default function AllUsersPage() {
 
   const handleAddUser = async () => {
     try {
-      if ( !newName || !newEmail || !newPassword) {
+      if (!newName || !newEmail || !newPassword) {
         alert("Email and Password required");
         return;
       }
@@ -189,8 +191,6 @@ export default function AllUsersPage() {
       setAddingUser(false);
     }
   };
-
-  
 
   if (loading) {
     return <div className="p-10 text-center font-bold">Loading users...</div>;
