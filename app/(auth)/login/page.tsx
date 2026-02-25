@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import logo from "@/public/cse.avif"
+import logo from "@/public/cse.avif";
 import {
   Card,
   CardContent,
@@ -21,8 +21,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
-
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -32,8 +30,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-
-
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setIsLoading(true);
@@ -42,43 +38,70 @@ const handleSubmit = async (e: React.FormEvent) => {
   try {
     const result = await signIn("credentials", {
       email,
-      password, 
+      password,
       redirect: false,
     });
     console.log("SignIn Result:", result);
 
     if (result?.error) {
-      const errorMessage = result.error === "CredentialsSignin" 
-        ? "Invalid email or password" 
+      const errorMessage = result.error === "CredentialsSignin"
+        ? "Invalid email or password"
         : result.error;
-        
       setError(errorMessage);
-      toast.error(`${errorMessage}`);
+      toast.error(errorMessage);
       setIsLoading(false);
-    } else {
-      toast.success("✅ Login successful!");
-      router.refresh();
-      
-   setTimeout(async () => {
-    const session = await getSession(); 
-    const role = (session?.user as any)?.role;
+      return;
+    }
 
-    if (role === "admin") {
-      router.push("/admin");
-    } else if (role === "teacher") {
-      router.push("/teacher");
-    } else {
-      router.push("/dashboard");
+  
+    const session = await getSession();
+    const token = (session?.user as any)?.accessToken;
+    const role = (session?.user as any)?.role;
+    const userEmail = session?.user?.email;
+
+  
+    if (role === "teacher") {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/status/${userEmail}`, {
+          headers: {
+            Authorization: `Bearer ${token}`, 
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+ 
+          if (data.user?.status === "pending") {
+            setError("Your account is pending approval by Admin.");
+            toast.error("Access Denied: Pending Status");
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Status check failed", err);
+      }
     }
-  }, 500);
-    }
+
+    toast.success("✅ Login successful!");
+    router.refresh();
+
+    setTimeout(() => {
+      if (role === "admin") {
+        router.push("/admin");
+      } else if (role === "teacher") {
+        router.push("/teacher");
+      } else {
+        router.push("/dashboard");
+      }
+    }, 500);
+
   } catch (err) {
     setError("Something went wrong. Please try again.");
-    toast.error(" Connection failed!");
+    toast.error("Connection failed!");
     setIsLoading(false);
   }
 };
-
 
   return (
     <div className="min-h-screen flex">
@@ -92,7 +115,13 @@ const handleSubmit = async (e: React.FormEvent) => {
         />
         <div className="absolute inset-0 bg-primary/60" />
         <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-12">
-           <Image src={logo} alt="SmartCSE Logo" width={60} height={34} className="object-contain" />
+          <Image
+            src={logo}
+            alt="SmartCSE Logo"
+            width={60}
+            height={34}
+            className="object-contain"
+          />
           <h2 className="text-3xl font-bold text-primary-foreground mb-4">
             Welcome to SmartCSE
           </h2>
@@ -114,7 +143,13 @@ const handleSubmit = async (e: React.FormEvent) => {
           <CardHeader className="text-center">
             <Link href="/" className="mx-auto mb-4 flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg ">
-                 <Image src={logo} alt="SmartCSE Logo" width={34} height={34} className="object-contain" />
+                <Image
+                  src={logo}
+                  alt="SmartCSE Logo"
+                  width={34}
+                  height={34}
+                  className="object-contain"
+                />
               </div>
               <span className="text-2xl font-bold text-foreground">
                 SmartCSE

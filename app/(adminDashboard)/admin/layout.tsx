@@ -25,7 +25,9 @@ import {
   ShieldAlert,
   Menu,
   X,
-  CircleSlash,
+  icons,
+  PersonStanding,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -59,6 +61,8 @@ export default function AdminLayout({
     {icon:CircleSlash, label:"Classroom Management", href:"/admin/classroom"},
 
     { icon: Settings, label: "General Settings", href: "/admin/settings" },
+    { icon: ShieldAlert, label: "Security Logs", href: "/admin/security-logs" },
+    { icon: Clock, label: "Pending Users", href: "/admin/pending-users" },
   ];
 
   return (
@@ -105,7 +109,13 @@ export default function AdminLayout({
           <div className="flex items-center gap-4">
             <Button>
               <Link href="/" className="flex items-center gap-2">
-                <Image src={logo} alt="SmartCSE Logo" width={20} height={20} className="object-contain" />
+                <Image
+                  src={logo}
+                  alt="SmartCSE Logo"
+                  width={20}
+                  height={20}
+                  className="object-contain"
+                />
                 View Site
               </Link>
             </Button>
