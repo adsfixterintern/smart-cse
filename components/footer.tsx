@@ -89,9 +89,7 @@ export function Footer() {
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} SmartCSE. All rights reserved.
             </p>
-            <p className="text-sm text-muted-foreground">
-              Developed by Md. Mosaraf Hossen (21CSE-044)
-            </p>
+
           </div>
         </div>
       </div>

@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import logo from "@/public/cse.avif";
+import Image from "next/image";
 
 import {
   GraduationCap,
@@ -23,6 +25,7 @@ import {
   ShieldAlert,
   Menu,
   X,
+  CircleSlash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -53,6 +56,7 @@ export default function AdminLayout({
       label: "Student Feedback",
       href: "/admin/student-feedback",
     },
+    {icon:CircleSlash, label:"Classroom Management", href:"/admin/classroom"},
 
     { icon: Settings, label: "General Settings", href: "/admin/settings" },
   ];
@@ -101,7 +105,7 @@ export default function AdminLayout({
           <div className="flex items-center gap-4">
             <Button>
               <Link href="/" className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5" />
+                <Image src={logo} alt="SmartCSE Logo" width={20} height={20} className="object-contain" />
                 View Site
               </Link>
             </Button>
@@ -152,8 +156,14 @@ function SidebarContent({
       {/* LOGO */}
       <div className="p-8 border-b border-slate-800 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <div className="bg-primary p-2 rounded-xl">
-            <GraduationCap className="h-6 w-6 text-white" />
+          <div className=" p-2 rounded-xl">
+            <Image
+              src={logo}
+              alt="SmartCSE Logo"
+              width={60}
+              height={34}
+              className="object-contain"
+            />
           </div>
           <span className="text-2xl font-black text-white tracking-tighter">
             Smart<span className="text-primary">Admin</span>

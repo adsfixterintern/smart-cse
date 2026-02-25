@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import logo from "@/public/cse.avif"
 import {
   Card,
   CardContent,
@@ -44,6 +45,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       password, 
       redirect: false,
     });
+    console.log("SignIn Result:", result);
 
     if (result?.error) {
       const errorMessage = result.error === "CredentialsSignin" 
@@ -90,7 +92,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         />
         <div className="absolute inset-0 bg-primary/60" />
         <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-12">
-          <GraduationCap className="h-16 w-16 text-primary-foreground mb-6" />
+           <Image src={logo} alt="SmartCSE Logo" width={60} height={34} className="object-contain" />
           <h2 className="text-3xl font-bold text-primary-foreground mb-4">
             Welcome to SmartCSE
           </h2>
@@ -111,8 +113,8 @@ const handleSubmit = async (e: React.FormEvent) => {
         <Card className="w-full max-w-md border-border/50">
           <CardHeader className="text-center">
             <Link href="/" className="mx-auto mb-4 flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                <GraduationCap className="h-6 w-6 text-primary-foreground" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg ">
+                 <Image src={logo} alt="SmartCSE Logo" width={34} height={34} className="object-contain" />
               </div>
               <span className="text-2xl font-bold text-foreground">
                 SmartCSE

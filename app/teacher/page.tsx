@@ -3,77 +3,83 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
-
-interface Resource {
-  title: string;
-  url: string;
-  type: string;
-}
 
 interface Course {
   _id: string;
   name: string;
   code: string;
-  teacherName: string;
   teacherId: string;
-  credit: string;
   semester: string;
-  imageUrl: string;
-  resources: Resource[];
+  credit: number;
+  imageUrl?: string;
+  resources?: any[];
 }
 
+interface Teacher {
+  _id: string;
+  name: string;
+  email: string;
+  teacherId: string;
+}
+
+type SemesterCourses = Record<string, Course[]>;
+
 export default function TeacherDashboardPage() {
-  const { data: session } = useSession();
-  const API_RUL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-  const [courses, setCourses] = useState<Course[]>([]);
+  const { data: session, status } = useSession();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+  const [groupedCourses, setGroupedCourses] = useState<SemesterCourses>({});
   const [loading, setLoading] = useState(true);
 
-  const teacherId = (session?.user as any)?.id;
+  const email = session?.user?.email;
   const token = (session?.user as any)?.accessToken;
 
   useEffect(() => {
-    if (!teacherId || !token) return;
+    if (status !== "authenticated" || !email || !token) return;
 
-    const fetchCourses = async () => {
+    const loadData = async () => {
       try {
-        const res = await fetch(`${API_RUL}/courses`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        setLoading(true);
+
+        const teacherRes = await fetch(`${API_URL}/users/email/${email}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        const teacher: Teacher = await teacherRes.json();
 
-        const data = await res.json();
+        const courseRes = await fetch(`${API_URL}/courses`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const courses: Course[] = await courseRes.json();
 
-        //  Filter by teacherId
-        const myCourses = data.filter(
-          (course: Course) => course.teacherId === teacherId,
+        const myCourses = courses.filter(
+          (c) => c.teacherId === teacher.teacherId
         );
 
-        console.log("My Courses:", myCourses);
+        const grouped = myCourses.reduce<SemesterCourses>((acc, course) => {
+          acc[course.semester] = acc[course.semester] || [];
+          acc[course.semester].push(course);
+          return acc;
+        }, {});
 
-        setCourses(myCourses);
-      } catch (err) {
-        console.error("Failed to load courses", err);
+        setGroupedCourses(grouped);
+      } catch (e) {
+        console.error("Failed to load dashboard", e);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCourses();
-  }, [teacherId, token]);
+    loadData();
+  }, [status, email, token, API_URL]);
 
-  const totalCourses = useMemo(() => courses.length, [courses]);
+  const totalCourses = useMemo(
+    () => Object.values(groupedCourses).flat().length,
+    [groupedCourses]
+  );
 
-  if (loading) {
+  if (loading || status === "loading") {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -83,75 +89,66 @@ export default function TeacherDashboardPage() {
 
   return (
     <div className="space-y-8 p-4 md:p-6">
-      {/* ===== TOP SECTION ===== */}
+      {/* ===== TOP SECTION (MATCHED) ===== */}
       <section className="rounded-3xl bg-slate-900 p-8 text-white shadow-2xl">
         <h1 className="text-3xl font-black">
-          Welcome,{" "}
-          <span className="text-blue-400">
-            {session?.user?.name || "Teacher"}
-          </span>
+          Welcome, <span className="text-blue-400">{session?.user?.name || "Teacher"}</span>
         </h1>
-
-        <p className="mt-3 text-slate-400 font-medium">
-          You are teaching{" "}
-          <span className="text-white font-bold">{totalCourses}</span>{" "}
-          course(s).
+        <p className="mt-3 font-medium text-slate-400">
+          You are teaching <span className="font-bold text-white">{totalCourses}</span> course(s).
         </p>
       </section>
 
-      {/* ===== COURSE TABLE ===== */}
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold">My Courses</CardTitle>
-        </CardHeader>
+      {/* ===== SEMESTER-WISE TABLES (MATCHED STYLE) ===== */}
+      {Object.keys(groupedCourses).length === 0 && (
+        <Card className="border-none shadow-sm">
+          <CardContent className="py-10 text-center">No courses found</CardContent>
+        </Card>
+      )}
 
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Course</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Semester</TableHead>
-                <TableHead>Credit</TableHead>
-                <TableHead>Resources</TableHead>
-              </TableRow>
-            </TableHeader>
+      {Object.entries(groupedCourses).map(([semester, courses]) => (
+        <Card key={semester} className="border-none shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold">Semester {semester}</CardTitle>
+          </CardHeader>
 
-            <TableBody>
-              {courses.length === 0 && (
+          <CardContent>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    No courses found
-                  </TableCell>
+                  <TableHead>Image</TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Credit</TableHead>
+                  <TableHead>Resources</TableHead>
                 </TableRow>
-              )}
+              </TableHeader>
 
-              {courses.map((course) => (
-                <TableRow key={course._id}>
-                  <TableCell>
-                    <img
-                      src={course.imageUrl}
-                      alt={course.name}
-                      className="h-12 w-20 object-cover rounded-lg"
-                    />
-                  </TableCell>
-
-                  <TableCell className="font-bold">{course.name}</TableCell>
-
-                  <TableCell>{course.code}</TableCell>
-
-                  <TableCell>{course.semester}</TableCell>
-
-                  <TableCell>{course.credit}</TableCell>
-
-                  <TableCell>{course.resources?.length || 0}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              <TableBody>
+                {courses.map((course) => (
+                  <TableRow key={course._id}>
+                    <TableCell>
+                      {course.imageUrl ? (
+                        <img
+                          src={course.imageUrl}
+                          alt={course.name}
+                          className="h-12 w-20 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="h-12 w-20 rounded-lg bg-slate-200" />
+                      )}
+                    </TableCell>
+                    <TableCell className="font-bold">{course.name}</TableCell>
+                    <TableCell>{course.code}</TableCell>
+                    <TableCell>{course.credit}</TableCell>
+                    <TableCell>{course.resources?.length || 0}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

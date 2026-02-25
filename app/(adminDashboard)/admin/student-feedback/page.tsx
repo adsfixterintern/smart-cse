@@ -26,6 +26,7 @@ interface Feedback {
 export default function StudentFeedback() {
   const { data: session } = useSession();
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
+  const [selectedComment, setSelectedComment] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -67,6 +68,13 @@ export default function StudentFeedback() {
 
     fetchFeedback();
   }, [token]);
+
+  //================== TRUNCATE COMMENT ================= */
+  const truncateComment = (text: string, wordLimit = 4) => {
+  const words = text.split(" ");
+  if (words.length <= wordLimit) return text;
+  return words.slice(0, wordLimit).join(" ") + "...";
+};
 
   
   /* ================= DELETE FEEDBACK ================= */
@@ -188,8 +196,13 @@ export default function StudentFeedback() {
                 </TableCell>
 
                 <TableCell className="max-w-xs text-sm text-muted-foreground">
-                  {fb.comment}
-                </TableCell>
+  <span
+    className="cursor-pointer hover:text-primary transition"
+    onClick={() => setSelectedComment(fb.comment)}
+  >
+    {truncateComment(fb.comment)}
+  </span>
+</TableCell>
 
                 <TableCell className="text-right">
                   <Button
@@ -206,6 +219,26 @@ export default function StudentFeedback() {
           </TableBody>
         </Table>
       </Card>
+      {selectedComment && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-2xl p-6 w-[90%] max-w-lg shadow-2xl relative">
+      
+      <h2 className="text-xl font-bold mb-4">Full Comment</h2>
+      
+      <p className="text-muted-foreground mb-6">
+        {selectedComment}
+      </p>
+
+      <Button
+        className="w-full"
+        onClick={() => setSelectedComment(null)}
+      >
+        Close
+      </Button>
+
+    </div>
+  </div>
+)}
     </div>
   );
 }
