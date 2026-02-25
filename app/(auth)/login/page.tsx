@@ -45,6 +45,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       password, 
       redirect: false,
     });
+    console.log("SignIn Result:", result);
 
     if (result?.error) {
       const errorMessage = result.error === "CredentialsSignin" 
