@@ -55,7 +55,6 @@ export default function AdminLayout({
     },
 
     { icon: Settings, label: "General Settings", href: "/admin/settings" },
-    { icon: ShieldAlert, label: "Security Logs", href: "/admin/security-logs" },
   ];
 
   return (
