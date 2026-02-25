@@ -47,12 +47,13 @@ interface ExtendedSession {
 }
 
 export default function StudentCourses() {
-  const { data: session } = useSession() as { data: ExtendedSession | null };
-  const { user } = useUser();
-  const [courses, setCourses] = useState<any[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<any>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session } = useSession() as { data: ExtendedSession | null }
+  const { user } = useUser() 
+
+  const [courses, setCourses] = useState<any[]>([])
+  const [selectedCourse, setSelectedCourse] = useState<any>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -60,7 +61,7 @@ export default function StudentCourses() {
       try {
         setLoading(true);
         const res = await fetch(
-          `https://smart-cse-server-eta.vercel.app/courses/${user.semester}`,
+          `http://localhost:5001/courses/${user.semester}`,
           {
             headers: { Authorization: `Bearer ${session?.user?.accessToken}` },
           },

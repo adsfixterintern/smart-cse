@@ -77,7 +77,6 @@ interface UserType {
 
 export default function AllUsersPage() {
   const { data: session, status } = useSession();
-  
 
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +90,10 @@ export default function AllUsersPage() {
 
   //
   useEffect(() => {
-    if (status === "authenticated" && (session?.user as { accessToken?: string })?.accessToken) {
+    if (
+      status === "authenticated" &&
+      (session?.user as { accessToken?: string })?.accessToken
+    ) {
       fetchUsers();
     }
   }, [session, status]);
@@ -119,7 +121,7 @@ export default function AllUsersPage() {
 
   const updateRole = async (id: string, newRole: string) => {
     await axios.patch(
-      `https://smart-cse-server-eta.vercel.app/users/${id}`,
+      `http://localhost:5001/users/${id}`,
       { role: newRole },
       {
         headers: {
@@ -131,7 +133,7 @@ export default function AllUsersPage() {
   };
 
   const deleteUser = async (id: string) => {
-    await axios.delete(`https://smart-cse-server-eta.vercel.app/users/${id}`, {
+    await axios.delete(`http://localhost:5001/users/${id}`, {
       headers: {
         Authorization: `Bearer ${(session?.user as { accessToken?: string })?.accessToken}`,
       },
@@ -141,7 +143,7 @@ export default function AllUsersPage() {
 
   const toggleBan = async (id: string, currentStatus?: boolean) => {
     await axios.patch(
-      `https://smart-cse-server-eta.vercel.app/users/${id}`,
+      `http://localhost:5001/users/${id}`,
       { banned: !currentStatus },
       {
         headers: {
@@ -163,14 +165,14 @@ export default function AllUsersPage() {
 
   const handleAddUser = async () => {
     try {
-      if ( !newName || !newEmail || !newPassword) {
+      if (!newName || !newEmail || !newPassword) {
         alert("Email and Password required");
         return;
       }
 
       setAddingUser(true);
 
-      await axios.post("https://smart-cse-server-eta.vercel.app/users", {
+      await axios.post("http://localhost:5001/users", {
         name: newName,
         email: newEmail,
         password: newPassword,
@@ -190,8 +192,6 @@ export default function AllUsersPage() {
       setAddingUser(false);
     }
   };
-
-  
 
   if (loading) {
     return <div className="p-10 text-center font-bold">Loading users...</div>;
