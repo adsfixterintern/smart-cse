@@ -32,6 +32,7 @@ const handler = NextAuth({
     }
 
     const data = await res.json();
+    console
 
 
     if (data && data.user) {

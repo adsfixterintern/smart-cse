@@ -31,6 +31,7 @@ interface ExtendedSession {
 export default function StudentCourses() {
   const { data: session } = useSession() as { data: ExtendedSession | null }
   const { user } = useUser() 
+
   const [courses, setCourses] = useState<any[]>([])
   const [selectedCourse, setSelectedCourse] = useState<any>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
