@@ -56,13 +56,15 @@ interface Teacher {
   experience: string;
   imageUrl: string;
   teacherId: string;
-  role?: string; 
+  role?: string;
 }
 
 export default function FacultyManagement() {
   const { data: session } = useSession();
   const token = (session?.user as any)?.accessToken;
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://smart-cse-server-eta.vercel.app";
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,12 +121,13 @@ export default function FacultyManagement() {
   // Filter Logic
   const filteredTeachers = useMemo(() => {
     return teachers.filter((t) => {
-    
       const matchesSearch =
         t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.teacherId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDesignation =
-        designationFilter === "all" || t.designation === designationFilter ||  t.role === "teacher";
+        designationFilter === "all" ||
+        t.designation === designationFilter ||
+        t.role === "teacher";
       return matchesSearch && matchesDesignation;
     });
   }, [teachers, searchQuery, designationFilter]);
@@ -649,7 +652,6 @@ export default function FacultyManagement() {
               )}
             </div>
 
-      
             <Button
               type="submit"
               className="w-full h-16 rounded-2xl font-black text-xl uppercase tracking-tighter col-span-2 shadow-2xl shadow-primary/30 mt-4"
