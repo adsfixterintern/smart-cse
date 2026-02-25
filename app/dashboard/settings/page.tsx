@@ -52,7 +52,7 @@ export default function StudentSettings() {
     try {
       const apiUrl =
         process.env.NEXT_PUBLIC_API_URL ||
-        "https://smart-cse-server-eta.vercel.app";
+        "http://localhost:5001";
       const res = await fetch(`${apiUrl}/upload-image`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -92,7 +92,7 @@ export default function StudentSettings() {
         try {
           const apiUrl =
             process.env.NEXT_PUBLIC_API_URL ||
-            "https://smart-cse-server-eta.vercel.app";
+            "http://localhost:5001";
 
           // _id এবং immutable fields বাদ দিয়ে ডাটা পাঠানো
           const { _id, email, password, role, createdAt, ...cleanData } =

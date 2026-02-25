@@ -45,7 +45,7 @@ export default function AttendanceSheetPage() {
   const todayDate = new Date().toISOString().split("T")[0];
   const apiUrl =
     process.env.NEXT_PUBLIC_API_URL ||
-    "https://smart-cse-server-eta.vercel.app";
+    "http://localhost:5001";
 
   // ১. সকল স্টুডেন্ট ফেচ করা
   useEffect(() => {
