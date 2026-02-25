@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 interface UserContextType {
   user: any;
@@ -24,6 +24,14 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const res = await fetch(`${apiUrl}/users/email/${session.user.email}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (res.status === 401 || res.status === 403) {
+        console.warn("Session expired or invalid token. Logging out...");
+        signOut({ callbackUrl: "/login" }); 
+        return;
+      }
+
+      if (!res.ok) throw new Error("Server error");
         const data = await res.json();
         setUser(data);
       } catch (err) {

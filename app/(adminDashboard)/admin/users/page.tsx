@@ -72,6 +72,7 @@ interface UserType {
   cgpa?: number;
   bloodGroup?: string;
   guardianPhone?: string;
+  status?: string;
 }
 
 export default function AllUsersPage() {
@@ -321,7 +322,7 @@ export default function AllUsersPage() {
                         </span>
                       ) : (
                         <span className="text-green-600 font-bold text-xs md:text-sm">
-                          Active
+                          {user.status || "Active"}
                         </span>
                       )}
                     </TableCell>

@@ -1,43 +1,40 @@
-"use client"
+"use client";
 
-import React from "react"
-
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { GraduationCap, Mail, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react"
+import React, { useState } from "react";
+import Link from "next/link";
+import axios from "axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { GraduationCap, Mail, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [error, setError] = useState("")
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
-    // TODO: Implement Firebase Password Reset
-    // import { sendPasswordResetEmail } from "firebase/auth"
-    // import { auth } from "@/lib/firebase"
-    
-    // try {
-    //   await sendPasswordResetEmail(auth, email)
-    //   setIsSubmitted(true)
-    // } catch (error) {
-    //   setError("Failed to send reset email. Please check your email address.")
-    // }
-
-    // Simulating password reset for demo purposes
-    setTimeout(() => {
-      setIsLoading(false)
-      setIsSubmitted(true)
-    }, 1500)
-  }
+    try {
+      // আপনার দেওয়া এন্ডপয়েন্টে রিকোয়েস্ট পাঠানো হচ্ছে
+      await axios.post(`${API_URL}/forget-password`, { email });
+      setIsSubmitted(true);
+    } catch (err: any) {
+      const message = err.response?.data?.message || "Something went wrong!";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isSubmitted) {
     return (
@@ -75,7 +72,7 @@ export default function ForgotPasswordPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -146,5 +143,5 @@ export default function ForgotPasswordPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
