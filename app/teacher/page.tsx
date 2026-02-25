@@ -71,8 +71,6 @@ export default function TeacherDashboardPage() {
         if (myAssignedRes.ok) {
           setMyAssignedClasses(await myAssignedRes.json());
         }
-
-        // ৩. টিচারের প্রোফাইল থেকে teacherId নিয়ে তার সব কোর্সের লিস্ট আনা
         const userRes = await fetch(`${API_URL}/users/email/${email}`, {
           headers: { Authorization: `Bearer ${token}` },
         });

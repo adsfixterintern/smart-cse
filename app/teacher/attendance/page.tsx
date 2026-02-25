@@ -13,7 +13,8 @@ import {
   Search,
   UserCheck,
   RefreshCcw,
-  CheckCircle2
+  CheckCircle2,
+  BookOpen
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -32,8 +33,8 @@ export default function AttendanceSheetPage() {
   const [attendance, setAttendance] = useState<Record<string, Status>>({});
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
 
-  // মুড ও লোডিং স্টেটস
-  const [isEditing, setIsEditing] = useState(false); // ট্র্যাক করবে এটা কি আপডেট নাকি নতুন ইনসার্ট
+  // লোডিং ও মুড স্টেটস
+  const [isEditing, setIsEditing] = useState(false);
   const [isMonthlyView, setIsMonthlyView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [courseLoading, setCourseLoading] = useState(false);
@@ -61,30 +62,54 @@ export default function AttendanceSheetPage() {
     }
   }, [status, apiUrl, session]);
 
-  // ২. সেমিস্টার অনুযায়ী কোর্স ফেচ করা
+  // ২. টিচারের নির্দিষ্ট কোর্সগুলো ড্রপডাউনে আনা (ড্যাশবোর্ড লজিক অনুযায়ী)
   useEffect(() => {
-    const fetchCourses = async () => {
-      if (!semester) {
+    const fetchMyCourses = async () => {
+      // সেমিস্টার সিলেক্ট না হওয়া পর্যন্ত কোর্স লোড হবে না
+      if (!semester || status !== "authenticated") {
         setCourseList([]);
         setCourse("");
         return;
       }
+
       setCourseLoading(true);
       try {
-        const res = await axios.get(`${apiUrl}/courses/${semester}`, {
-          headers: { Authorization: `Bearer ${(session as any)?.user?.accessToken}` },
+        const token = (session as any)?.user?.accessToken;
+        const email = session?.user?.email;
+
+        // প্রথমে টিচারের প্রোফাইল থেকে teacherId বের করা
+        const userRes = await axios.get(`${apiUrl}/users/email/${email}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        setCourseList(res.data || []);
+        const teacherId = userRes.data.teacherId;
+
+        // তারপর সব কোর্স ফেচ করা
+        const courseRes = await axios.get(`${apiUrl}/courses`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // ফিল্টারিং: বর্তমান টিচারের আইডি এবং সিলেক্টেড সেমিস্টার অনুযায়ী
+        const filtered = courseRes.data.filter((c: any) => 
+          c.teacherId === teacherId && String(c.semester) === String(semester)
+        );
+
+        setCourseList(filtered);
+        
+        if (filtered.length === 0) {
+          toast.error("No assigned courses found for this semester");
+        }
       } catch (error) {
-        toast.error("Error loading courses");
+        console.error("Course fetch error:", error);
+        toast.error("Error loading assigned courses");
       } finally {
         setCourseLoading(false);
       }
     };
-    fetchCourses();
-  }, [semester, apiUrl, session]);
 
-  // ৩. ডেইলি শীট লোড করা এবং মডিফিকেশন চেক করা
+    fetchMyCourses();
+  }, [semester, status, session, apiUrl]);
+
+  // ৩. ডেইলি শীট লোড করা
   const loadDailySheet = async () => {
     if (!semester || !course) {
       toast.error("Please select Semester and Course");
@@ -93,7 +118,7 @@ export default function AttendanceSheetPage() {
 
     setIsMonthlyView(false);
     const filtered = allStudents
-      .filter((s) => s.semester === semester)
+      .filter((s) => String(s.semester) === String(semester))
       .sort((a, b) => a.studentId.localeCompare(b.studentId));
 
     if (filtered.length === 0) {
@@ -104,7 +129,6 @@ export default function AttendanceSheetPage() {
     setStudents(filtered);
 
     try {
-      // চেক করা হচ্ছে আজকের অ্যাটেনডেন্স অলরেডি আছে কি না
       const res = await axios.get(
         `${apiUrl}/attendance/check?semester=${semester}&course=${course}&date=${todayDate}`,
         {
@@ -114,13 +138,13 @@ export default function AttendanceSheetPage() {
 
       if (res.data && res.data.attendance) {
         setAttendance(res.data.attendance);
-        setIsEditing(true); // ডাটা আছে, তাই এখন মডিফাই মুড
+        setIsEditing(true);
         toast("Existing record loaded for modification", { icon: "🔄" });
       } else {
         const initial: Record<string, Status> = {};
         filtered.forEach((s) => { initial[s._id] = "P"; });
         setAttendance(initial);
-        setIsEditing(false); // নতুন শীট
+        setIsEditing(false);
         toast.success("New sheet generated");
       }
     } catch (error) {
@@ -131,7 +155,7 @@ export default function AttendanceSheetPage() {
     }
   };
 
-  // ৪. সেভ বা মডিফাই করা (Upsert Logic)
+  // ৪. সেভ বা আপডেট করা
   const saveAttendance = async () => {
     if (!course || students.length === 0) return toast.error("Load students first");
 
@@ -149,7 +173,6 @@ export default function AttendanceSheetPage() {
         headers: { Authorization: `Bearer ${(session as any)?.user?.accessToken}` },
       });
 
-      // সার্ভার রেসপন্স চেক করে টোস্ট দেখানো
       if (res.data.type === "inserted") {
         toast.success("New attendance synced successfully!");
         setIsEditing(true);
@@ -184,7 +207,7 @@ export default function AttendanceSheetPage() {
 
       setMonthlyData(res.data.sort((a: any, b: any) => a.date.localeCompare(b.date)));
       setIsMonthlyView(true);
-      setStudents(allStudents.filter((s) => s.semester === semester));
+      setStudents(allStudents.filter((s) => String(s.semester) === String(semester)));
     } catch (error) {
       toast.error("Error loading monthly report");
     }
@@ -193,7 +216,7 @@ export default function AttendanceSheetPage() {
   if (loading) return (
     <div className="flex h-screen flex-col items-center justify-center gap-4">
       <Loader2 className="animate-spin text-blue-600" size={50} />
-      <p className="font-black italic uppercase text-slate-400 tracking-widest">Synchronizing DB...</p>
+      <p className="font-black italic uppercase text-slate-400 tracking-widest italic">Synchronizing Portal...</p>
     </div>
   );
 
@@ -207,7 +230,7 @@ export default function AttendanceSheetPage() {
             Attendance <span className="text-blue-600">Sync</span>
           </h1>
           <p className="text-slate-400 font-bold italic text-[10px] uppercase tracking-widest mt-2 flex items-center gap-1">
-            <CheckCircle2 size={12} className="text-emerald-500" /> Secure Database Synchronization
+            <CheckCircle2 size={12} className="text-emerald-500" /> Secure Teacher Access: {session?.user?.name}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -224,7 +247,7 @@ export default function AttendanceSheetPage() {
         <select
           value={semester}
           onChange={(e) => setSemester(e.target.value)}
-          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase outline-none focus:ring-4 ring-blue-500/20 transition-all border-none"
+          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase outline-none focus:ring-4 ring-blue-500/20 transition-all border-none cursor-pointer"
         >
           <option value="">Semester</option>
           {[...Array(8)].map((_, i) => <option key={i} value={i + 1}>SEM {i + 1}</option>)}
@@ -233,13 +256,13 @@ export default function AttendanceSheetPage() {
         <select
           value={course}
           onChange={(e) => setCourse(e.target.value)}
-          disabled={courseLoading}
-          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase md:col-span-2 outline-none focus:ring-4 ring-blue-500/20 border-none disabled:opacity-50"
+          disabled={courseLoading || !semester}
+          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase md:col-span-2 outline-none focus:ring-4 ring-blue-500/20 border-none disabled:opacity-50 cursor-pointer"
         >
-          <option value="">{courseLoading ? "Loading..." : "Select Course"}</option>
+          <option value="">{courseLoading ? "Finding Courses..." : "Select Assigned Course"}</option>
           {courseList.map((c) => (
-            <option key={c._id} value={c.courseName || c.name}>
-              {c.courseCode || c.code} - {c.courseName || c.name}
+            <option key={c._id} value={c.name}>
+              {c.code} - {c.name}
             </option>
           ))}
         </select>
@@ -254,7 +277,7 @@ export default function AttendanceSheetPage() {
         <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase outline-none border-none"
+          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase outline-none border-none cursor-pointer"
         >
           <option value="">Month</option>
           {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
@@ -355,11 +378,13 @@ export default function AttendanceSheetPage() {
 
       {/* --- EMPTY STATE --- */}
       {students.length === 0 && !loading && (
-        <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[4rem] border-4 border-dashed border-slate-100 animate-pulse">
+        <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[4rem] border-4 border-dashed border-slate-100">
           <div className="bg-slate-50 p-8 rounded-full mb-6">
             <Search className="w-20 h-20 text-slate-200" />
           </div>
-          <p className="font-black italic uppercase text-slate-300 tracking-[0.3em] text-sm">Select Parameters to Initialize Sync</p>
+          <p className="font-black italic uppercase text-slate-300 tracking-[0.3em] text-sm text-center">
+             {semester ? "No assigned courses found for this semester" : "Select Parameters to Initialize Sync"}
+          </p>
         </div>
       )}
     </div>

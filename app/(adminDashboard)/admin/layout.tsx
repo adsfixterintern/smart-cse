@@ -28,6 +28,7 @@ import {
   icons,
   PersonStanding,
   Clock,
+  CircleSlash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -58,7 +59,7 @@ export default function AdminLayout({
       label: "Student Feedback",
       href: "/admin/student-feedback",
     },
-    {icon:CircleSlash, label:"Classroom Management", href:"/admin/classroom"},
+    { icon: CircleSlash, label: "Classroom Management", href: "/admin/classroom" },
 
     { icon: Settings, label: "General Settings", href: "/admin/settings" },
     { icon: ShieldAlert, label: "Security Logs", href: "/admin/security-logs" },
