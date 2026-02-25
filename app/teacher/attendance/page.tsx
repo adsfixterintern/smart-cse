@@ -12,6 +12,8 @@ import {
   FileText,
   Search,
   UserCheck,
+  RefreshCcw,
+  CheckCircle2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -20,19 +22,18 @@ type Status = "P" | "A" | "L";
 export default function AttendanceSheetPage() {
   const { data: session, status } = useSession();
 
-  // ফিল্টার স্টেটস (Batch রিমুভ করা হয়েছে)
+  // স্টেটস
   const [semester, setSemester] = useState("");
   const [course, setCourse] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
-
-  // ডাটা স্টেটস
   const [courseList, setCourseList] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<Record<string, Status>>({});
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
 
-  // লোডিং ও ভিউ স্টেটস
+  // মুড ও লোডিং স্টেটস
+  const [isEditing, setIsEditing] = useState(false); // ট্র্যাক করবে এটা কি আপডেট নাকি নতুন ইনসার্ট
   const [isMonthlyView, setIsMonthlyView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [courseLoading, setCourseLoading] = useState(false);
@@ -83,6 +84,7 @@ export default function AttendanceSheetPage() {
     fetchCourses();
   }, [semester, apiUrl, session]);
 
+  // ৩. ডেইলি শীট লোড করা এবং মডিফিকেশন চেক করা
   const loadDailySheet = async () => {
     if (!semester || !course) {
       toast.error("Please select Semester and Course");
@@ -102,6 +104,7 @@ export default function AttendanceSheetPage() {
     setStudents(filtered);
 
     try {
+      // চেক করা হচ্ছে আজকের অ্যাটেনডেন্স অলরেডি আছে কি না
       const res = await axios.get(
         `${apiUrl}/attendance/check?semester=${semester}&course=${course}&date=${todayDate}`,
         {
@@ -111,21 +114,24 @@ export default function AttendanceSheetPage() {
 
       if (res.data && res.data.attendance) {
         setAttendance(res.data.attendance);
-        toast.success("Record found for today!");
+        setIsEditing(true); // ডাটা আছে, তাই এখন মডিফাই মুড
+        toast("Existing record loaded for modification", { icon: "🔄" });
       } else {
         const initial: Record<string, Status> = {};
         filtered.forEach((s) => { initial[s._id] = "P"; });
         setAttendance(initial);
-        toast("New sheet generated", { icon: "📝" });
+        setIsEditing(false); // নতুন শীট
+        toast.success("New sheet generated");
       }
     } catch (error) {
       const initial: Record<string, Status> = {};
       filtered.forEach((s) => { initial[s._id] = "P"; });
       setAttendance(initial);
+      setIsEditing(false);
     }
   };
 
-  // ৪. সেভ/আপডেট
+  // ৪. সেভ বা মডিফাই করা (Upsert Logic)
   const saveAttendance = async () => {
     if (!course || students.length === 0) return toast.error("Load students first");
 
@@ -139,11 +145,18 @@ export default function AttendanceSheetPage() {
         attendance,
       };
 
-      await axios.post(`${apiUrl}/attendance/upsert`, payload, {
+      const res = await axios.post(`${apiUrl}/attendance/upsert`, payload, {
         headers: { Authorization: `Bearer ${(session as any)?.user?.accessToken}` },
       });
 
-      toast.success(`Sync Complete: ${course}`);
+      // সার্ভার রেসপন্স চেক করে টোস্ট দেখানো
+      if (res.data.type === "inserted") {
+        toast.success("New attendance synced successfully!");
+        setIsEditing(true);
+      } else {
+        toast.success("Record modified & updated!");
+      }
+
     } catch (error) {
       toast.error("Sync Failed");
     } finally {
@@ -151,7 +164,7 @@ export default function AttendanceSheetPage() {
     }
   };
 
-  // ৫. মান্থলি ভিউ লোড করা (শুধুমাত্র অ্যাটেনডেন্স নেওয়া তারিখগুলো দেখাবে)
+  // ৫. মান্থলি ভিউ লোড করা
   const fetchMonthlyAttendance = async () => {
     if (!semester || !selectedMonth || !course) {
       return toast.error("Select Semester, Course, and Month");
@@ -165,15 +178,12 @@ export default function AttendanceSheetPage() {
       );
 
       if (res.data.length === 0) {
-        toast.error("No class records found for this month");
+        toast.error("No class records found");
         return;
       }
 
-      const sortedData = res.data.sort((a: any, b: any) => a.date.localeCompare(b.date));
-      setMonthlyData(sortedData);
+      setMonthlyData(res.data.sort((a: any, b: any) => a.date.localeCompare(b.date)));
       setIsMonthlyView(true);
-
-      // এই সেমিস্টারের সকল স্টুডেন্টদের দেখানো
       setStudents(allStudents.filter((s) => s.semester === semester));
     } catch (error) {
       toast.error("Error loading monthly report");
@@ -183,36 +193,38 @@ export default function AttendanceSheetPage() {
   if (loading) return (
     <div className="flex h-screen flex-col items-center justify-center gap-4">
       <Loader2 className="animate-spin text-blue-600" size={50} />
-      <p className="font-black italic uppercase text-slate-400">Loading Database...</p>
+      <p className="font-black italic uppercase text-slate-400 tracking-widest">Synchronizing DB...</p>
     </div>
   );
 
   return (
     <div className="p-4 md:p-10 space-y-8 bg-slate-50 min-h-screen">
-      {/* Header */}
+      
+      {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">
+          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">
             Attendance <span className="text-blue-600">Sync</span>
           </h1>
-          <p className="text-slate-400 font-bold italic text-[10px] uppercase tracking-widest mt-1">
-            Semester Based Attendance System
+          <p className="text-slate-400 font-bold italic text-[10px] uppercase tracking-widest mt-2 flex items-center gap-1">
+            <CheckCircle2 size={12} className="text-emerald-500" /> Secure Database Synchronization
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Badge variant="outline" className="border-2 border-slate-900 font-black italic uppercase px-6 py-2 rounded-2xl">
-            <UserCheck className="w-4 h-4 mr-2" /> {session?.user?.name}
+          <Badge variant="outline" className={`border-2 font-black italic uppercase px-6 py-2 rounded-2xl ${isEditing ? 'border-amber-500 text-amber-600' : 'border-emerald-500 text-emerald-600'}`}>
+            {isEditing ? <RefreshCcw className="w-4 h-4 mr-2" /> : <UserCheck className="w-4 h-4 mr-2" />}
+            {isEditing ? "Modify Mode" : "New Entry Mode"}
           </Badge>
-          <Badge className="bg-blue-600 font-black italic uppercase px-6 py-2 rounded-2xl">{todayDate}</Badge>
+          <Badge className="bg-slate-900 font-black italic uppercase px-6 py-2 rounded-2xl tracking-tighter shadow-lg">{todayDate}</Badge>
         </div>
       </div>
 
-      {/* Control Panel (Batch রিমুভ করা হয়েছে) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100">
+      {/* --- CONTROL PANEL --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100">
         <select
           value={semester}
           onChange={(e) => setSemester(e.target.value)}
-          className="bg-slate-50 rounded-xl p-4 font-black italic text-xs uppercase outline-none focus:ring-2 ring-blue-500"
+          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase outline-none focus:ring-4 ring-blue-500/20 transition-all border-none"
         >
           <option value="">Semester</option>
           {[...Array(8)].map((_, i) => <option key={i} value={i + 1}>SEM {i + 1}</option>)}
@@ -222,7 +234,7 @@ export default function AttendanceSheetPage() {
           value={course}
           onChange={(e) => setCourse(e.target.value)}
           disabled={courseLoading}
-          className="bg-slate-50 rounded-xl p-4 font-black italic text-xs uppercase md:col-span-2 outline-none focus:ring-2 ring-blue-500"
+          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase md:col-span-2 outline-none focus:ring-4 ring-blue-500/20 border-none disabled:opacity-50"
         >
           <option value="">{courseLoading ? "Loading..." : "Select Course"}</option>
           {courseList.map((c) => (
@@ -232,14 +244,17 @@ export default function AttendanceSheetPage() {
           ))}
         </select>
 
-        <button onClick={loadDailySheet} className="bg-slate-900 text-white font-black italic uppercase text-[10px] rounded-2xl p-4 hover:bg-blue-600 flex items-center justify-center gap-2">
+        <button 
+          onClick={loadDailySheet} 
+          className="bg-slate-900 text-white font-black italic uppercase text-[10px] rounded-[1.5rem] p-4 hover:bg-blue-600 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-slate-200"
+        >
           <Calendar size={16} /> Load Daily
         </button>
 
         <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="bg-slate-50 rounded-xl p-4 font-black italic text-xs uppercase outline-none"
+          className="bg-slate-50 rounded-2xl p-4 font-black italic text-xs uppercase outline-none border-none"
         >
           <option value="">Month</option>
           {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
@@ -247,42 +262,48 @@ export default function AttendanceSheetPage() {
           ))}
         </select>
 
-        <button onClick={fetchMonthlyAttendance} className="bg-blue-600 text-white font-black italic uppercase text-[10px] rounded-2xl p-4 hover:bg-slate-900 flex items-center justify-center gap-2">
+        <button 
+          onClick={fetchMonthlyAttendance} 
+          className="bg-blue-600 text-white font-black italic uppercase text-[10px] rounded-[1.5rem] p-4 hover:bg-slate-900 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-blue-200"
+        >
           <FileText size={16} /> Monthly
         </button>
       </div>
 
-      {/* Main Table */}
+      {/* --- ATTENDANCE TABLE --- */}
       {students.length > 0 && (
-        <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-50">
+        <div className="bg-white rounded-[3.5rem] shadow-2xl overflow-hidden border border-slate-50 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-900 text-slate-400 italic uppercase text-[9px] tracking-widest">
-                  <th className="p-8">ID / Roll</th>
-                  <th className="p-8">Student Name</th>
+                <tr className="bg-slate-900 text-slate-400 italic uppercase text-[9px] tracking-widest border-b border-slate-800">
+                  <th className="p-10 pl-12">Student Profile</th>
+                  <th className="p-10">System ID</th>
                   {isMonthlyView ? (
-                    // শুধুমাত্র যে তারিখগুলোতে অ্যাটেনডেন্স নেওয়া হয়েছে সেগুলো দেখাবে
                     monthlyData.map((d) => (
-                      <th key={d.date} className="p-4 text-center text-white border-l border-slate-800">
-                        {d.date.split("-")[2]}<br/>{d.date.split("-")[1]}
+                      <th key={d.date} className="p-4 text-center text-white border-l border-white/5 font-black">
+                        {d.date.split("-")[2]}<br/><span className="text-[8px] text-blue-400">{d.date.split("-")[1]}</span>
                       </th>
                     ))
                   ) : (
-                    <th className="p-8 text-center text-white border-l border-slate-800">Today Status</th>
+                    <th className="p-10 text-center text-white border-l border-white/5">Current Status</th>
                   )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {students.map((s) => (
-                  <tr key={s._id} className="hover:bg-blue-50/30 transition-colors">
-                    <td className="p-8 font-black italic text-blue-600 text-sm">{s.studentId}</td>
-                    <td className="p-8 font-black uppercase italic text-slate-800 text-sm">{s.name}</td>
+                  <tr key={s._id} className="hover:bg-blue-50/40 transition-all group">
+                    <td className="p-8 pl-12 font-black uppercase italic text-slate-800 text-sm tracking-tight">
+                      {s.name}
+                    </td>
+                    <td className="p-8 font-black italic text-blue-600 text-sm tracking-tighter">
+                      {s.studentId}
+                    </td>
                     {isMonthlyView ? (
                       monthlyData.map((d) => {
                         const status = d.attendance?.[s._id];
                         return (
-                          <td key={d.date} className={`p-4 text-center font-black italic text-xs border-l ${
+                          <td key={d.date} className={`p-4 text-center font-black italic text-xs border-l border-slate-50 ${
                             status === "P" ? "text-emerald-500" : status === "A" ? "text-rose-500" : "text-amber-500"
                           }`}>
                             {status || "—"}
@@ -290,14 +311,14 @@ export default function AttendanceSheetPage() {
                         );
                       })
                     ) : (
-                      <td className="p-8 text-center bg-slate-50/30 border-l">
+                      <td className="p-8 text-center bg-slate-50/40 border-l border-slate-100">
                         <select
                           value={attendance[s._id]}
                           onChange={(e) => setAttendance({ ...attendance, [s._id]: e.target.value as Status })}
-                          className={`font-black italic text-xs px-6 py-3 rounded-xl border-2 uppercase outline-none cursor-pointer ${
-                            attendance[s._id] === "P" ? "border-emerald-200 text-emerald-600 bg-white" :
-                            attendance[s._id] === "A" ? "border-rose-200 text-rose-600 bg-white" : "border-amber-200 text-amber-600 bg-white"
-                          }`}
+                          className={`font-black italic text-xs px-8 py-3.5 rounded-2xl border-2 uppercase outline-none cursor-pointer transition-all active:scale-95 ${
+                            attendance[s._id] === "P" ? "border-emerald-200 text-emerald-600 bg-white shadow-emerald-50" :
+                            attendance[s._id] === "A" ? "border-rose-200 text-rose-600 bg-white shadow-rose-50" : "border-amber-200 text-amber-600 bg-white shadow-amber-50"
+                          } shadow-md`}
                         >
                           <option value="P">Present</option>
                           <option value="A">Absent</option>
@@ -311,29 +332,34 @@ export default function AttendanceSheetPage() {
             </table>
           </div>
 
-          <div className="p-10 bg-slate-50/80 flex flex-wrap gap-4 justify-between items-center border-t">
+          {/* --- FOOTER ACTIONS --- */}
+          <div className="p-12 bg-slate-50/80 flex flex-wrap gap-6 justify-between items-center border-t border-slate-100">
             {!isMonthlyView && (
               <button
                 onClick={saveAttendance}
                 disabled={isSaving}
-                className="bg-emerald-500 text-white font-black italic uppercase px-12 py-5 rounded-[1.5rem] hover:bg-emerald-600 shadow-xl flex items-center gap-3 disabled:opacity-50 transition-all active:scale-95"
+                className={`${isEditing ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white font-black italic uppercase px-14 py-6 rounded-[2rem] shadow-2xl flex items-center gap-4 disabled:opacity-50 transition-all active:scale-95 group`}
               >
-                {isSaving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-                Sync Database
+                {isSaving ? <Loader2 className="animate-spin" /> : (isEditing ? <RefreshCcw className="group-hover:rotate-180 transition-transform duration-500" size={24} /> : <Save size={24} />)}
+                <span className="text-lg tracking-tighter">
+                  {isEditing ? "Modify Today's Sync" : "Sync Current Sheet"}
+                </span>
               </button>
             )}
-            <button className="bg-slate-900 text-white font-black italic uppercase px-12 py-5 rounded-[1.5rem] hover:bg-blue-600 transition-all flex items-center gap-3 shadow-xl">
-              <Download size={20} /> Export Report
+            <button className="bg-slate-900 text-white font-black italic uppercase px-14 py-6 rounded-[2rem] hover:bg-blue-600 transition-all flex items-center gap-4 shadow-2xl active:scale-95">
+              <Download size={24} /> <span className="text-lg tracking-tighter">Export Report</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Empty State */}
+      {/* --- EMPTY STATE --- */}
       {students.length === 0 && !loading && (
-        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
-          <Search className="w-16 h-16 text-slate-100 mb-4" />
-          <p className="font-black italic uppercase text-slate-300 tracking-widest">Select Semester & Course</p>
+        <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[4rem] border-4 border-dashed border-slate-100 animate-pulse">
+          <div className="bg-slate-50 p-8 rounded-full mb-6">
+            <Search className="w-20 h-20 text-slate-200" />
+          </div>
+          <p className="font-black italic uppercase text-slate-300 tracking-[0.3em] text-sm">Select Parameters to Initialize Sync</p>
         </div>
       )}
     </div>
