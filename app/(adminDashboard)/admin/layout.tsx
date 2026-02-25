@@ -59,7 +59,6 @@ export default function AdminLayout({
     {icon:CircleSlash, label:"Classroom Management", href:"/admin/classroom"},
 
     { icon: Settings, label: "General Settings", href: "/admin/settings" },
-    { icon: ShieldAlert, label: "Security Logs", href: "/admin/security-logs" },
   ];
 
   return (
