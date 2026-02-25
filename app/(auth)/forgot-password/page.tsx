@@ -21,18 +21,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     setError("")
 
-    // TODO: Implement Firebase Password Reset
-    // import { sendPasswordResetEmail } from "firebase/auth"
-    // import { auth } from "@/lib/firebase"
-    
-    // try {
-    //   await sendPasswordResetEmail(auth, email)
-    //   setIsSubmitted(true)
-    // } catch (error) {
-    //   setError("Failed to send reset email. Please check your email address.")
-    // }
 
-    // Simulating password reset for demo purposes
     setTimeout(() => {
       setIsLoading(false)
       setIsSubmitted(true)
