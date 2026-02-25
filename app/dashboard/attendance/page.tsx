@@ -34,7 +34,7 @@ export default function DynamicAttendancePage() {
   // API URL defined
   const apiUrl =
     process.env.NEXT_PUBLIC_API_URL ||
-    "https://smart-cse-server-eta.vercel.app";
+    "http://localhost:5001";
 
   useEffect(() => {
     const fetchData = async () => {

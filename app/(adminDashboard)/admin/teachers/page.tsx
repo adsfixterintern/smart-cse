@@ -64,7 +64,7 @@ export default function FacultyManagement() {
   const token = (session?.user as any)?.accessToken;
   const baseUrl =
     process.env.NEXT_PUBLIC_API_URL ||
-    "https://smart-cse-server-eta.vercel.app";
+    "http://localhost:5001";
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);

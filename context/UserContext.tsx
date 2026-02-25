@@ -21,7 +21,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const token = (session as any)?.user?.accessToken;
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL ||
-          "https://smart-cse-server-eta.vercel.app";
+          "http://localhost:5001";
         const res = await fetch(`${apiUrl}/users/email/${session.user.email}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
