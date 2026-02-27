@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
+import { set } from "date-fns";
 
 interface UserContextType {
   user: any;
@@ -20,14 +21,18 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const token = (session as any)?.user?.accessToken;
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
         const res = await fetch(`${apiUrl}/users/email/${session.user.email}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (res.status === 401 || res.status === 403) {
         console.warn("Session expired or invalid token. Logging out...");
-        signOut({ callbackUrl: "/login" }); 
+
+        setUser(null);
+        signOut({ 
+          redirect: false,
+          callbackUrl: "/login" }); 
         return;
       }
 
