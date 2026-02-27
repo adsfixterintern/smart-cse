@@ -24,7 +24,8 @@ export default function StudentDashboard() {
       if (!session?.user) return;
       try {
         const token = (session as any)?.user?.accessToken;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/student/dashboard-overview`, {
+        console.log(token)
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/overview`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const result = await res.json();
